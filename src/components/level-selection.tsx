@@ -12,16 +12,19 @@ import {
   type Difficulty,
 } from "../lib/config";
 import type { HighScores } from "../lib/storage";
+import { CATEGORIES, type GameCategory } from "../lib/categories";
 
 export function LevelSelection({
   onSelect,
   onBack,
+  category,
   scores,
   loading,
   error,
 }: {
   onSelect: (level: Difficulty) => void;
   onBack: () => void;
+  category: GameCategory;
   scores: HighScores;
   loading: Difficulty | null;
   error: string;
@@ -29,10 +32,10 @@ export function LevelSelection({
   return (
     <section className="wrap level-page" aria-labelledby="level-title">
       <button className="text-button back-button" onClick={onBack}>
-        <ArrowLeft size={17} /> Ana sayfa
+        <ArrowLeft size={17} /> Kategoriler
       </button>
       <div className="page-heading">
-        <span className="eyebrow">MEYDAN OKUMANI SEÇ</span>
+        <span className="eyebrow">{CATEGORIES[category].label.toLocaleUpperCase("tr-TR")}</span>
         <h1 id="level-title" tabIndex={-1}>
           Bugün ne kadar iddialısın?
         </h1>

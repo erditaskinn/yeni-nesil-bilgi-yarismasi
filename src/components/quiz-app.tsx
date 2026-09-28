@@ -3,17 +3,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Heart, ShieldCheck } from "lucide-react";
 import { Brand } from "./brand";
+import { CategorySelection } from "./category-selection";
 import { Home } from "./home";
 import { LevelSelection } from "./level-selection";
 import { Quiz } from "./quiz";
+import { StatisticsPanel } from "./statistics";
+import { createDailyGame } from "../lib/daily";
 import { createGame, selectQuestions, type GameState } from "../lib/game";
 import { questionRepository } from "../lib/question-repository";
 import { DIFFICULTIES, type Difficulty } from "../lib/config";
-import { readHighScores, type HighScores } from "../lib/storage";
+import { GAME_CATEGORIES, type GameCategory } from "../lib/categories";
+import { readHighScores, readSeenQuestions, saveSeenQuestions, type HighScores } from "../lib/storage";
 
-type Screen = "home" | "levels" | "quiz";
+type Screen = "home" | "categories" | "levels" | "quiz" | "statistics";
 export function QuizApp() {
   const [screen, setScreen] = useState<Screen>("home");
+  const [category, setCategory] = useState<GameCategory>("mixed");
   const [game, setGame] = useState<GameState | null>(null);
   const [session, setSession] = useState(0);
   const [scores, setScores] = useState<HighScores>({});
@@ -28,24 +33,35 @@ export function QuizApp() {
       document.querySelector<HTMLElement>("main h1")?.focus();
   }, [screen, session]);
 
-  function goTo(next: Screen) {
+  function goTo(next: Screen, nextCategory: GameCategory = category) {
     requestId.current++;
     starting.current = false;
     setLoading(null);
     setError("");
-    if (next === "levels") setScores(readHighScores());
+    if (next === "levels") setScores(readHighScores(undefined, nextCategory));
     setScreen(next);
   }
-  const start = useCallback(async (level: Difficulty) => {
+  function chooseCategory(nextCategory: GameCategory) {
+    setCategory(nextCategory);
+    setGame(null);
+    goTo("levels", nextCategory);
+  }
+  const start = useCallback(async (level: Difficulty, selectedCategory: GameCategory) => {
     if (starting.current) return;
     starting.current = true;
     const id = ++requestId.current;
     setLoading(level);
     setError("");
     try {
-      const pool = await questionRepository.getByDifficulty(level);
+      const pool = await questionRepository.getByDifficulty(level, selectedCategory);
       if (id !== requestId.current) return;
-      setGame(createGame(selectQuestions(pool, level), level, Date.now()));
+      const selected = selectQuestions(pool, level, {
+        category: selectedCategory,
+        seenQuestionIds: readSeenQuestions(),
+      });
+      setGame({ ...createGame(selected, level, Date.now(), selectedCategory), sessionId: crypto.randomUUID() });
+      setCategory(selectedCategory);
+      saveSeenQuestions(selected.map((q) => q.id));
       setSession((n) => n + 1);
       setScreen("quiz");
     } catch (e) {
@@ -61,14 +77,40 @@ export function QuizApp() {
     }
   }, []);
 
+  const startDaily = useCallback(async () => {
+    if (starting.current) return;
+    starting.current = true;
+    const id = ++requestId.current;
+    setLoading("medium");
+    setError("");
+    try {
+      const pool = await questionRepository.getAll();
+      if (id !== requestId.current) return;
+      setGame({ ...createDailyGame(pool, Date.now()), sessionId: crypto.randomUUID() });
+      setCategory("mixed");
+      setSession(n => n + 1);
+      setScreen("quiz");
+    } catch {
+      if (id === requestId.current) { setError("Günlük sorular yüklenemedi. Yeniden deneyebilirsin."); setScreen("home"); }
+    } finally {
+      if (id === requestId.current) { starting.current = false; setLoading(null); }
+    }
+  }, []);
+
   useEffect(() => {
-    const level = new URLSearchParams(window.location.search).get("seviye");
-    if (DIFFICULTIES.some(item => item === level)) {
-      window.history.replaceState(null, "", "/");
-      const timer = window.setTimeout(() => void start(level as Difficulty), 0);
+    const query = new URLSearchParams(window.location.search);
+    const level = query.get("seviye");
+    const requestedCategory = query.get("kategori");
+    const selectedCategory = GAME_CATEGORIES.find(item => item === requestedCategory) ?? "mixed";
+    if (query.get("mod") === "gunluk") {
+      const timer = window.setTimeout(() => { window.history.replaceState(null, "", "/"); void startDaily(); }, 0);
       return () => window.clearTimeout(timer);
     }
-  }, [start]);
+    if (DIFFICULTIES.some(item => item === level)) {
+      const timer = window.setTimeout(() => { window.history.replaceState(null, "", "/"); void start(level as Difficulty, selectedCategory); }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [start, startDaily]);
 
   return (
     <div className="app-shell">
@@ -93,7 +135,7 @@ export function QuizApp() {
               <a className="nav-how" href="#nasil-oynanir">
                 Nasıl oynanır?
               </a>
-              <button className="header-play" onClick={() => goTo("levels")}>
+              <button className="header-play" onClick={() => goTo("categories")}>
                 Oyuna Başla <ArrowUpRight size={17} />
               </button>
             </nav>
@@ -105,11 +147,19 @@ export function QuizApp() {
         </div>
       </header>
       <main id="main">
-        {screen === "home" && <Home onPlay={() => goTo("levels")} />}
+        {screen === "home" && <><Home onPlay={() => goTo("categories")} onDaily={() => void startDaily()} onStatistics={() => goTo("statistics")} loadingDaily={loading !== null} /><p className="wrap" role="alert">{error}</p></>}
+        {screen === "statistics" && <StatisticsPanel onBack={() => goTo("home")} />}
+        {screen === "categories" && (
+          <CategorySelection
+            onBack={() => goTo("home")}
+            onSelect={chooseCategory}
+          />
+        )}
         {screen === "levels" && (
           <LevelSelection
-            onBack={() => goTo("home")}
-            onSelect={start}
+            category={category}
+            onBack={() => goTo("categories")}
+            onSelect={(level) => start(level, category)}
             scores={scores}
             loading={loading}
             error={error}
@@ -119,9 +169,10 @@ export function QuizApp() {
           <Quiz
             key={session}
             initialState={game}
-            onExit={() => goTo("levels")}
-            onReplay={() => start(game.difficulty)}
-            onLevels={() => goTo("levels")}
+            onExit={() => goTo(game.dailyDate ? "home" : "levels")}
+            onReplay={() => game.dailyDate ? startDaily() : start(game.difficulty, game.category)}
+            onLevels={() => goTo("levels", game.category)}
+            onCategories={() => goTo("categories")}
             onHome={() => goTo("home")}
           />
         )}

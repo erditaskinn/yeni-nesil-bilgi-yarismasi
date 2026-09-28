@@ -1,4 +1,5 @@
 import { GAME_CONFIG, type Difficulty } from "./config";
+import { matchesCategory, type GameCategory } from "./categories";
 import type { Answer, Question } from "./types";
 
 export function shuffle<T>(
@@ -16,16 +17,21 @@ export function shuffle<T>(
 export function selectQuestions(
   pool: readonly Question[],
   difficulty: Difficulty,
-  random = Math.random,
+  { category = "mixed", random = Math.random, seenQuestionIds = [] }: { category?: GameCategory; random?: () => number; seenQuestionIds?: readonly string[] } = {},
 ): Question[] {
   const eligible = [
     ...new Map(
-      pool.filter((q) => q.difficulty === difficulty).map((q) => [q.id, q]),
+      pool.filter((q) => q.difficulty === difficulty && matchesCategory(q.category, category)).map((q) => [q.id, q]),
     ).values(),
   ];
   if (eligible.length < GAME_CONFIG.questionCount)
-    throw new Error("Bu seviye için yeterli soru bulunamadı.");
-  return shuffle(eligible, random)
+    throw new Error("Bu kategori ve seviye için yeterli soru bulunamadı.");
+  const seenOrder = new Map(seenQuestionIds.map((id, index) => [id, index]));
+  const unseen = shuffle(eligible.filter((q) => !seenOrder.has(q.id)), random);
+  const seen = eligible
+    .filter((q) => seenOrder.has(q.id))
+    .sort((a, b) => seenOrder.get(a.id)! - seenOrder.get(b.id)!);
+  return [...unseen, ...seen]
     .slice(0, GAME_CONFIG.questionCount)
     .map((q) => ({
       ...q,
@@ -64,8 +70,18 @@ export function summarize(answers: readonly Answer[]) {
   };
 }
 
+export function missedQuestions(state: GameState): { question: Question; answer: Answer; number: number }[] {
+  return state.answers.flatMap((answer, index) => {
+    const question = state.questions[index];
+    return !answer.correct && question ? [{ question, answer, number: index + 1 }] : [];
+  });
+}
+
 export interface GameState {
+  sessionId: string;
+  dailyDate: string | null;
   difficulty: Difficulty;
+  category: GameCategory;
   questions: Question[];
   index: number;
   answers: Answer[];
@@ -87,11 +103,15 @@ export function createGame(
   questions: Question[],
   difficulty: Difficulty,
   now: number,
+  category: GameCategory = "mixed",
 ): GameState {
   if (questions.length !== GAME_CONFIG.questionCount)
     throw new Error("Oyun 10 sorudan oluşmalıdır.");
   return {
+    sessionId: String(now),
+    dailyDate: null,
     difficulty,
+    category,
     questions,
     index: 0,
     answers: [],

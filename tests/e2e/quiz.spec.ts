@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { questions } from "../../src/data/questions";
+import { matchesCategory } from "../../src/lib/categories";
 
 async function noOverflow(page: Page) {
   expect(
@@ -18,6 +19,7 @@ async function accessible(page: Page) {
 async function start(page: Page, difficulty = "easy") {
   await page.goto("/");
   await page.getByRole("button", { name: "Hemen Oyna" }).click();
+  await page.getByTestId("category-mixed").click();
   await page.getByTestId(`level-${difficulty}`).click();
   await expect(page.getByTestId("question-number")).toHaveText("01");
 }
@@ -55,6 +57,14 @@ test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", asy
     fullPage: true,
   });
   await page.getByRole("button", { name: "Hemen Oyna" }).click();
+  await accessible(page);
+  await noOverflow(page);
+  await expect(page.getByTestId("category-mixed")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("categories.png"),
+    fullPage: true,
+  });
+  await page.getByTestId("category-mixed").click();
   await accessible(page);
   await noOverflow(page);
   await page.screenshot({
@@ -112,6 +122,32 @@ test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", asy
     path: testInfo.outputPath("results.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Yanlışlarımı İncele" }).click();
+  await expect(page.locator(".review-list > li")).toHaveCount(3);
+  await expect(page.getByRole("heading", { name: "Yanlışlarımı İncele" })).toBeVisible();
+  await accessible(page);
+  await noOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("review.png"), fullPage: true });
+  await page.getByRole("button", { name: "Yanlışlarımı Çalış" }).click();
+  for (let i = 0; i < 3; i++) {
+    const text = await page.locator("main h1").innerText();
+    const question = questions.find((item) => item.question === text)!;
+    const answer = question.choices.find((choice) => choice.id === question.correctAnswer)!;
+    await page.getByRole("button", { name: answer.text, exact: true }).click();
+    await expect(page.locator(".choice:disabled")).toHaveCount(4);
+    if (i === 0) {
+      await accessible(page);
+      await noOverflow(page);
+      await page.screenshot({ path: testInfo.outputPath("practice.png"), fullPage: true });
+    }
+    await page.getByRole("button", { name: i === 2 ? "Çalışmayı Bitir" : "Sonraki Soru" }).click();
+  }
+  await expect(page.getByRole("heading", { name: "Güzel bir tekrar yaptın!" })).toBeVisible();
+  await expect(page.getByText("3 sorudan 3 tanesini")).toBeVisible();
+  await accessible(page);
+  await noOverflow(page);
+  await page.getByRole("button", { name: "Sonuçlarıma Dön" }).click();
+  await expect(page.getByTestId("total-score")).toHaveText("1.400");
   await page.getByRole("button", { name: "Sonucumu Paylaş" }).click();
   await expect(page.getByText("Sonucun panoya kopyalandı!")).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem("shared"))).toContain(
@@ -126,12 +162,65 @@ test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", asy
   await page.getByRole("button", { name: "Tekrar Oyna" }).click();
   await expect(page.getByTestId("question-number")).toHaveText("01");
   await expect(page.getByTestId("live-score")).toHaveText("0 puan");
+  const nextHistory = await page.evaluate(() => JSON.parse(localStorage.getItem("ynby:seen-questions:v1") ?? "[]") as string[]);
+  expect(nextHistory.slice(-10).every((id) => !seen.has(id))).toBe(true);
   await expect(page.locator(".choice:disabled")).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("button", { name: "Hemen Oyna" })).toBeVisible();
   await page.getByRole("button", { name: "Hemen Oyna" }).click();
+  await page.getByTestId("category-mixed").click();
   await expect(page.getByTestId("level-easy")).toContainText("1.400");
   expect(errors).toEqual([]);
+});
+
+test("süresi dolan soru incelenir; çalışma turunda zaman aşımı ve puan yoktur", async ({ page }) => {
+  await page.clock.install();
+  await start(page);
+  await page.clock.fastForward(21000);
+  await page.getByRole("button", { name: "Sonraki Soru" }).click();
+  for (let i = 1; i < 10; i++) {
+    const text = await page.locator("main h1").innerText();
+    const current = questions.find((item) => item.question === text)!;
+    await page.getByRole("button", { name: current.choices.find((choice) => choice.id === current.correctAnswer)!.text, exact: true }).click();
+    await page.getByRole("button", { name: i === 9 ? "Sonucumu Gör" : "Sonraki Soru" }).click();
+  }
+  const score = await page.getByTestId("total-score").innerText();
+  await page.getByRole("button", { name: "Yanlışlarımı İncele" }).click();
+  await expect(page.locator(".review-list > li")).toHaveCount(1);
+  await expect(page.getByText("Süre doldu", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Yanlışlarımı Çalış" }).click();
+  await page.clock.fastForward(60000);
+  await expect(page.locator(".choice:enabled")).toHaveCount(4);
+  await expect(page.getByRole("timer")).toHaveCount(0);
+  await expect(page.getByTestId("live-score")).toHaveCount(0);
+  await page.getByRole("button", { name: "Sonuçlarıma Dön" }).click();
+  await expect(page.getByTestId("total-score")).toHaveText(score);
+});
+
+test("kategori seçimi zorluktan önce gelir ve sorular seçilen konuda kalır", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Hemen Oyna" }).click();
+  await page.getByTestId("category-science").click();
+  await expect(page.getByText("BİLİM VE DOĞA", { exact: true })).toBeVisible();
+  await page.getByTestId("level-expert").click();
+  const firstText = await page.locator("main h1").innerText();
+  const first = questions.find((q) => q.question === firstText);
+  expect(first).toBeDefined();
+  expect(first?.difficulty).toBe("expert");
+  expect(matchesCategory(first!.category, "science")).toBe(true);
+  await expect(page.locator(".quiz-category")).toHaveText("Bilim ve Doğa");
+  await noOverflow(page);
+  await accessible(page);
+  await page.getByRole("button", { name: "Yarışmadan çık", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Yarışmadan Çık" }).click();
+  await page.getByRole("button", { name: "Kategoriler" }).click();
+  await page.getByTestId("category-history").click();
+  await page.getByTestId("level-easy").click();
+  const secondText = await page.locator("main h1").innerText();
+  const second = questions.find((q) => q.question === secondText);
+  expect(second).toBeDefined();
+  expect(second?.difficulty).toBe("easy");
+  expect(matchesCategory(second!.category, "history")).toBe(true);
 });
 
 test("zaman aşımı, çıkış onayı, klavye ve seviye değiştirme", async ({

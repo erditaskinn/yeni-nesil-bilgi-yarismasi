@@ -14,7 +14,7 @@ export interface Question {
   explanation: string;
   sourceUrl: string;
   reviewedAt: string;
-  image?: { src: string; alt: string; width: number; height: number };
+  image?: { src: string; alt: string; width: number; height: number; credit: string; licenseUrl: string };
 }
 export interface Answer {
   questionId: string;

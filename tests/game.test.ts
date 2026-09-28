@@ -6,17 +6,25 @@ import {
   calculatePoints,
   createGame,
   gameReducer,
+  missedQuestions,
   secondsLeft,
   selectQuestions,
   summarize,
 } from "../src/lib/game";
-import { readHighScores, saveHighScore, STORAGE_KEY } from "../src/lib/storage";
+import { readHighScores, readSeenQuestions, saveHighScore, saveSeenQuestions, SEEN_STORAGE_KEY, STORAGE_KEY } from "../src/lib/storage";
 import { questionRepository } from "../src/lib/question-repository";
+import { CATEGORIES, GAME_CATEGORIES, matchesCategory } from "../src/lib/categories";
+import { initialPracticeState, practiceReducer } from "../src/lib/practice";
 
 test("soru havuzu benzersiz, dört seçenekli, tek doğru cevaplı ve kaynaklıdır", () => {
+  assert.equal(questions.length, 500);
   assert.equal(new Set(questions.map((q) => q.id)).size, questions.length);
+  assert.equal(
+    new Set(questions.map((q) => q.question.toLocaleLowerCase("tr").trim())).size,
+    questions.length,
+  );
   for (const level of DIFFICULTIES)
-    assert.ok(questions.filter((q) => q.difficulty === level).length >= 12);
+    assert.equal(questions.filter((q) => q.difficulty === level).length, 125);
   for (const q of questions) {
     assert.equal(q.choices.length, 4);
     assert.equal(new Set(q.choices.map((c) => c.id)).size, 4);
@@ -46,9 +54,36 @@ for (const difficulty of DIFFICULTIES) {
   });
 }
 
+test("her soru tek bir konu kategorisine girer; her kategori ve seviyede tur için yeterli soru vardır", async () => {
+  for (const q of questions) {
+    assert.equal(
+      GAME_CATEGORIES.filter((category) => category !== "mixed" && matchesCategory(q.category, category)).length,
+      1,
+      `Kategori eşlemesi eksik veya çakışıyor: ${q.id}`,
+    );
+  }
+  for (const category of GAME_CATEGORIES) {
+    assert.ok(CATEGORIES[category].label);
+    for (const difficulty of DIFFICULTIES) {
+      const pool = await questionRepository.getByDifficulty(difficulty, category);
+      assert.ok(pool.length >= GAME_CONFIG.questionCount, `${category}/${difficulty}`);
+      if (category !== "mixed") {
+        assert.equal(pool.length, category === "culture" ? 32 : 31, `${category}/${difficulty}`);
+      }
+      assert.ok(pool.every((q) => q.difficulty === difficulty && matchesCategory(q.category, category)));
+      for (let i = 0; i < 20; i++) {
+        const selected = selectQuestions(questions, difficulty, { category });
+        assert.equal(selected.length, GAME_CONFIG.questionCount);
+        assert.equal(new Set(selected.map((q) => q.id)).size, GAME_CONFIG.questionCount);
+        assert.ok(selected.every((q) => q.difficulty === difficulty && matchesCategory(q.category, category)));
+      }
+    }
+  }
+});
+
 test("karıştırma kaynak veriyi değiştirmez ve doğru cevabı korur", () => {
   const before = JSON.stringify(questions);
-  const selected = selectQuestions(questions, "easy", () => 0);
+  const selected = selectQuestions(questions, "easy", { random: () => 0 });
   for (const q of selected) {
     const original = questions.find((item) => item.id === q.id)!;
     assert.equal(
@@ -71,6 +106,16 @@ test("eksik havuz kontrollü hata verir, tekrar kimlikler sayılmaz", () => {
     /yeterli/,
   );
 });
+test("yakın zamanda görülen sorular ertelenir; havuz bitince en eskiler döner", () => {
+  const eligible = questions.filter((q) => q.difficulty === "easy" && matchesCategory(q.category, "space"));
+  const seenQuestionIds = eligible.slice(0, 22).map((q) => q.id);
+  const selected = selectQuestions(questions, "easy", { category: "space", seenQuestionIds, random: () => 0.5 });
+  assert.equal(selected.length, 10);
+  assert.equal(selected.filter((q) => !seenQuestionIds.includes(q.id)).length, 9);
+  assert.equal(selected[9]?.id, seenQuestionIds[0]);
+  const allSeen = selectQuestions(questions, "easy", { category: "space", seenQuestionIds: eligible.map((q) => q.id) });
+  assert.deepEqual(allSeen.map((q) => q.id), eligible.slice(0, 10).map((q) => q.id));
+});
 
 test("puan formülü sınırları", () => {
   assert.equal(calculatePoints(true, 20), 200);
@@ -85,7 +130,7 @@ test("puan formülü sınırları", () => {
 
 function fresh() {
   return createGame(
-    selectQuestions(questions, "easy", () => 0.5),
+    selectQuestions(questions, "easy", { random: () => 0.5 }),
     "easy",
     1000,
   );
@@ -190,6 +235,9 @@ test("on soru sonunda toplam ve başarı doğru; yeni oyunda eski durum temiz", 
     });
   }
   assert.equal(state.phase, "finished");
+  const missed = missedQuestions(state);
+  assert.deepEqual(missed.map((item) => item.number), [8, 9, 10]);
+  assert.ok(missed.every((item) => item.question.id === item.answer.questionId));
   assert.deepEqual(summarize(state.answers), {
     total: 1050,
     correct: 7,
@@ -207,6 +255,28 @@ test("on soru sonunda toplam ve başarı doğru; yeni oyunda eski durum temiz", 
     wrong: 0,
     percentage: 0,
   });
+  const categoryGame = createGame(selectQuestions(questions, "hard", { category: "science" }), "hard", 1000, "science");
+  assert.equal(categoryGame.category, "science");
+  assert.ok(categoryGame.questions.every((q) => matchesCategory(q.category, "science")));
+});
+test("süresiz çalışma tek yanıt alır, ilerler ve puan üretmez", () => {
+  const selected = selectQuestions(questions, "easy", { random: () => 0.5 }).slice(0, 2);
+  const first = selected[0]!;
+  const wrong = first.choices.find((choice) => choice.id !== first.correctAnswer)!.id;
+  const answered = practiceReducer(initialPracticeState, { type: "answer", questionId: first.id, selectedId: wrong }, selected);
+  assert.equal(answered.phase, "feedback");
+  assert.equal(answered.correct, 0);
+  assert.strictEqual(practiceReducer(answered, { type: "answer", questionId: first.id, selectedId: first.correctAnswer }, selected), answered);
+  const next = practiceReducer(answered, { type: "next", questionId: first.id }, selected);
+  assert.equal(next.index, 1);
+  assert.equal(next.phase, "answering");
+  assert.strictEqual(practiceReducer(next, { type: "answer", questionId: first.id, selectedId: wrong }, selected), next);
+  const second = selected[1]!;
+  const correct = practiceReducer(next, { type: "answer", questionId: second.id, selectedId: second.correctAnswer }, selected);
+  assert.equal(correct.correct, 1);
+  const finished = practiceReducer(correct, { type: "next", questionId: second.id }, selected);
+  assert.equal(finished.phase, "finished");
+  assert.deepEqual(practiceReducer(finished, { type: "restart" }, selected), initialPracticeState);
 });
 test("yerel rekor yalnızca yükselir, seviyeler ayrı tutulur", () => {
   const data = new Map<string, string>();
@@ -223,6 +293,13 @@ test("yerel rekor yalnızca yükselir, seviyeler ayrı tutulur", () => {
   assert.ok(data.has(STORAGE_KEY));
   saveHighScore("easy", 1000, storage);
   assert.equal(readHighScores(storage).easy, 1000);
+  saveHighScore("easy", 650, storage, "space");
+  saveHighScore("easy", 400, storage, "space");
+  saveHighScore("easy", 900, storage, "science");
+  assert.deepEqual(readHighScores(storage, "space"), { easy: 650 });
+  assert.deepEqual(readHighScores(storage, "science"), { easy: 900 });
+  assert.equal(readHighScores(storage).easy, 1000);
+  assert.ok(data.has(`${STORAGE_KEY}:space`));
 });
 test("engelli, bozuk veya kullanılamayan depolama oyunu bozmaz", () => {
   const denied = {
@@ -249,4 +326,20 @@ test("engelli, bozuk veya kullanılamayan depolama oyunu bozmaz", () => {
     );
   }
   assert.deepEqual(saveHighScore("easy", NaN, denied), {});
+});
+test("görülen soru geçmişi sıralı, sınırlı ve bozuk depolamaya dayanıklı", () => {
+  const data = new Map<string, string>();
+  const storage = { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); } };
+  saveSeenQuestions(["a", "b", "a"], storage);
+  saveSeenQuestions(["b", "c"], storage);
+  assert.deepEqual(readSeenQuestions(storage), ["a", "b", "c"]);
+  assert.ok(data.has(SEEN_STORAGE_KEY));
+  saveSeenQuestions(Array.from({ length: 600 }, (_, i) => `q${i}`), storage);
+  assert.equal(readSeenQuestions(storage).length, 500);
+  assert.equal(readSeenQuestions(storage)[0], "q100");
+  data.set(SEEN_STORAGE_KEY, '{"invalid":true}');
+  assert.deepEqual(readSeenQuestions(storage), []);
+  const denied = { getItem() { throw new Error("denied"); }, setItem() { throw new Error("quota"); } };
+  assert.deepEqual(readSeenQuestions(denied), []);
+  assert.doesNotThrow(() => saveSeenQuestions(["a"], denied));
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useRef, useState } from "react";
-import Image from "next/image";
+import { QuestionImage } from "./question-image";
 import {
   ArrowRight,
   Check,
@@ -14,21 +14,25 @@ import {
   X,
 } from "lucide-react";
 import { GAME_CONFIG, LEVELS } from "../lib/config";
+import { CATEGORIES } from "../lib/categories";
 import { gameReducer, summarize, type GameState } from "../lib/game";
 import { ExitDialog } from "./exit-dialog";
 import { Results } from "./results";
+import { dailyLabel } from "../lib/daily";
 
 export function Quiz({
   initialState,
   onExit,
   onReplay,
   onLevels,
+  onCategories,
   onHome,
 }: {
   initialState: GameState;
   onExit: () => void;
   onReplay: () => void;
   onLevels: () => void;
+  onCategories: () => void;
   onHome: () => void;
 }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
@@ -64,6 +68,7 @@ export function Quiz({
         state={state}
         onReplay={onReplay}
         onLevels={onLevels}
+        onCategories={onCategories}
         onHome={onHome}
       />
     );
@@ -71,10 +76,13 @@ export function Quiz({
   return (
     <section className="quiz-page wrap" aria-label="Bilgi yarışması">
       <div className="quiz-topbar">
-        <span className={`difficulty-label level-${state.difficulty}`}>
-          <span />
-          {LEVELS[state.difficulty].label}
-        </span>
+        <div className="quiz-mode">
+          <span className={`difficulty-label level-${state.difficulty}`}>
+            <span />
+            {state.dailyDate ? "Günlük 10 Soru" : LEVELS[state.difficulty].label}
+          </span>
+          <span className="quiz-category">{state.dailyDate ? dailyLabel(state.dailyDate) : CATEGORIES[state.category].label}</span>
+        </div>
         <button className="text-button" onClick={() => setExitOpen(true)}>
           <LogOut size={17} /> Yarışmadan çık
         </button>
@@ -120,13 +128,7 @@ export function Quiz({
           {q.question}
         </h1>
         {q.image && (
-          <Image
-            className="question-image"
-            src={q.image.src}
-            alt={q.image.alt}
-            width={q.image.width}
-            height={q.image.height}
-          />
+          <QuestionImage key={q.id} image={q.image} showCredit={locked} />
         )}
         <div className="choices" role="group" aria-label="Cevap seçenekleri">
           {q.choices.map((choice, i) => {

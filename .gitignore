@@ -1,6 +1,7 @@
 node_modules/
 .next/
 out/
+.backups/
 test-results/
 playwright-report/
 .dev-server*.log

@@ -5,6 +5,8 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  ExternalLink,
+  BookOpen,
   RotateCcw,
   Share2,
   SlidersHorizontal,
@@ -12,31 +14,45 @@ import {
   X,
 } from "lucide-react";
 import { LEVELS, SITE_URL } from "../lib/config";
-import { summarize, type GameState } from "../lib/game";
+import { CATEGORIES } from "../lib/categories";
+import { missedQuestions, summarize, type GameState } from "../lib/game";
 import { saveHighScore } from "../lib/storage";
+import { Practice } from "./practice";
+import { dailyLabel } from "../lib/daily";
+import { recordGame } from "../lib/statistics";
+import { QuestionImage } from "./question-image";
 
 export function Results({
   state,
   onReplay,
   onLevels,
+  onCategories,
   onHome,
 }: {
   state: GameState;
   onReplay: () => void;
   onLevels: () => void;
+  onCategories: () => void;
   onHome: () => void;
 }) {
   const summary = summarize(state.answers);
   const [shareStatus, setShareStatus] = useState("");
   const [manualCopy, setManualCopy] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [view, setView] = useState<"summary" | "review" | "practice">("summary");
   const heading = useRef<HTMLHeadingElement>(null);
-  const text = `Yeni Nesil Bilgi Yarışması'nda ${LEVELS[state.difficulty].label} seviyede ${state.questions.length} sorudan ${summary.correct} tanesini doğru cevapladım! Sen de bilgini test et: ${SITE_URL}`;
+  const missed = missedQuestions(state);
+  const categoryText = state.category === "mixed" ? "" : `${CATEGORIES[state.category].label} kategorisinde `;
+  const text = state.dailyDate ? `Yeni Nesil Bilgi Yarışması'nda ${dailyLabel(state.dailyDate)} günlük turunda 10 sorudan ${summary.correct} tanesini doğru cevapladım! Bugünün turunu oyna: ${SITE_URL}/?mod=gunluk` : `Yeni Nesil Bilgi Yarışması'nda ${categoryText}${LEVELS[state.difficulty].label} seviyede ${state.questions.length} sorudan ${summary.correct} tanesini doğru cevapladım! Sen de bilgini test et: ${SITE_URL}`;
 
   useEffect(() => {
-    saveHighScore(state.difficulty, summary.total);
+    if (!state.dailyDate) saveHighScore(state.difficulty, summary.total, undefined, state.category);
+    recordGame(state);
+  }, [state, summary.total]);
+  useEffect(() => {
     heading.current?.focus();
-  }, [state.difficulty, summary.total]);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [view]);
 
   async function copy() {
     try {
@@ -67,14 +83,38 @@ export function Results({
     }
   }
 
+  if (view === "practice") return <Practice questions={missed.map((item) => item.question)} onBack={() => setView("summary")} />;
+
+  if (view === "review") return (
+    <section className="review-page wrap" aria-labelledby="review-title">
+      <button className="text-button" onClick={() => setView("summary")}><ArrowLeft size={17} /> Sonuçlarıma Dön</button>
+      <span className="eyebrow">TURUNUN ARDINDAN</span>
+      <h1 id="review-title" ref={heading} tabIndex={-1}>Yanlışlarımı İncele</h1>
+      <p>{missed.length} soruyu kaçırdın. Doğru cevaplara ve kaynaklarına buradan dönebilirsin.</p>
+      <ol className="review-list">
+        {missed.map(({ question, answer, number }) => <li key={question.id}>
+          <span className="eyebrow">{number}. SORU · {question.category.toLocaleUpperCase("tr-TR")}</span>
+          <h2>{question.question}</h2>
+          {question.image && <QuestionImage image={question.image} showCredit />}
+          <dl>
+            <div><dt>Senin cevabın</dt><dd>{answer.selectedId === null ? "Süre doldu" : question.choices.find((choice) => choice.id === answer.selectedId)?.text}</dd></div>
+            <div><dt>Doğru cevap</dt><dd>{question.choices.find((choice) => choice.id === question.correctAnswer)?.text}</dd></div>
+          </dl>
+          <p>{question.explanation}</p>
+          <a href={question.sourceUrl} target="_blank" rel="noreferrer">Kaynağı incele <ExternalLink size={14} /><span className="sr-only"> (yeni sekmede açılır)</span></a>
+        </li>)}
+      </ol>
+      <div className="study-actions"><button className="button primary" onClick={() => setView("practice")}><BookOpen size={18} /> Yanlışlarımı Çalış</button><button className="button secondary" onClick={() => setView("summary")}><ArrowLeft size={18} /> Sonuçlarıma Dön</button></div>
+    </section>
+  );
+
   return (
     <section className="results-page wrap" aria-labelledby="result-title">
       <div className="result-emblem">
         <Trophy size={38} strokeWidth={1.6} />
       </div>
       <span className="eyebrow">
-        {LEVELS[state.difficulty].label.toLocaleUpperCase("tr-TR")} SEVİYE
-        TAMAMLANDI
+        {state.dailyDate ? `GÜNLÜK 10 SORU · ${dailyLabel(state.dailyDate)}` : `${CATEGORIES[state.category].label.toLocaleUpperCase("tr-TR")} · ${LEVELS[state.difficulty].label.toLocaleUpperCase("tr-TR")} SEVİYE`}
       </span>
       <h1 id="result-title" ref={heading} tabIndex={-1}>
         {summary.percentage >= 80
@@ -128,6 +168,13 @@ export function Results({
           </span>
         ))}
       </div>
+      {missed.length > 0 ? <div className="study-prompt">
+        <p>{missed.length} soruya yeniden göz atabilirsin.</p>
+        <div className="study-actions">
+          <button className="button secondary" onClick={() => setView("review")}><BookOpen size={18} /> Yanlışlarımı İncele</button>
+          <button className="button secondary" onClick={() => setView("practice")}><RotateCcw size={18} /> Yanlışlarımı Çalış</button>
+        </div>
+      </div> : <p className="study-perfect">Tüm soruları doğru cevapladın!</p>}
       <div className="result-actions">
         <button className="button primary" onClick={onReplay}>
           <RotateCcw size={18} /> Tekrar Oyna
@@ -136,13 +183,18 @@ export function Results({
           <SlidersHorizontal size={18} /> Seviye Değiştir
         </button>
       </div>
-      <button
-        className="text-button share-button"
-        disabled={sharing}
-        onClick={share}
-      >
-        <Share2 size={18} /> Sonucumu Paylaş
-      </button>
+      <div className="result-secondary-actions">
+        <button className="text-button" onClick={onCategories}>
+          <SlidersHorizontal size={17} /> Kategori Değiştir
+        </button>
+        <button
+          className="text-button share-button"
+          disabled={sharing}
+          onClick={share}
+        >
+          <Share2 size={18} /> Sonucumu Paylaş
+        </button>
+      </div>
       <p className="share-status" role="status">
         {shareStatus}
       </p>
