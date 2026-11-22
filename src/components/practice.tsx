@@ -1,12 +1,17 @@
 "use client";
+import { useI18n } from "./locale-provider";
+
 
 import { useEffect, useReducer, useRef } from "react";
 import { QuestionImage } from "./question-image";
-import { ArrowLeft, ArrowRight, Check, ExternalLink, Lightbulb, RotateCcw, X } from "lucide-react";
+import { QuestionAnswer, correctAnswerText, solutionDetail } from "./question-answer";
+import { ArrowLeft, ArrowRight, Check, ExternalLink, Lightbulb, RotateCcw } from "lucide-react";
 import { initialPracticeState, practiceReducer } from "../lib/practice";
+import { evaluateQuestion } from "../lib/question-engine";
 import type { Question } from "../lib/types";
 
-export function Practice({ questions, onBack }: { questions: readonly Question[]; onBack: () => void }) {
+export function Practice({ questions, onBack, onCorrect }: { questions: readonly Question[]; onBack: () => void; onCorrect?: (id: string) => void }) {
+  const { t } = useI18n();
   const [state, dispatch] = useReducer(
     (current: typeof initialPracticeState, action: Parameters<typeof practiceReducer>[1]) =>
       practiceReducer(current, action, questions),
@@ -19,12 +24,12 @@ export function Practice({ questions, onBack }: { questions: readonly Question[]
 
   if (state.phase === "finished") return (
     <section className="study-page wrap" aria-labelledby="study-title">
-      <span className="eyebrow">ÇALIŞMA TAMAMLANDI</span>
-      <h1 id="study-title" ref={heading} tabIndex={-1}>Güzel bir tekrar yaptın!</h1>
-      <p>{questions.length} sorudan {state.correct} tanesini bu kez doğru cevapladın. Bu tur puanına ve rekoruna eklenmedi.</p>
+      <span className="eyebrow">{t("practiceFinished")}</span>
+      <h1 id="study-title" ref={heading} tabIndex={-1}>{t("practiceTitle")}</h1>
+      <p>{t("practiceSummary", { total: questions.length, correct: state.correct })}</p>
       <div className="study-actions">
-        <button className="button primary" onClick={() => dispatch({ type: "restart" })}><RotateCcw size={17} /> Tekrar Çalış</button>
-        <button className="button secondary" onClick={onBack}><ArrowLeft size={17} /> Sonuçlarıma Dön</button>
+        <button className="button primary" onClick={() => dispatch({ type: "restart" })}><RotateCcw size={17} />{t("practiceAgain")}</button>
+        <button className="button secondary" onClick={onBack}><ArrowLeft size={17} />{t("resultsBack")}</button>
       </div>
     </section>
   );
@@ -33,30 +38,24 @@ export function Practice({ questions, onBack }: { questions: readonly Question[]
   const locked = state.phase === "feedback";
   return (
     <section className="study-page wrap" aria-labelledby="study-title">
-      <button className="text-button" onClick={onBack}><ArrowLeft size={17} /> Sonuçlarıma Dön</button>
-      <div className="study-topline"><span className="eyebrow">YANLIŞLARIMI ÇALIŞ</span><span>Soru {state.index + 1} / {questions.length}</span></div>
-      <p className="study-mode">Süresiz · Puansız</p>
-      <progress className="question-progress" value={state.index + 1} max={questions.length} aria-label={`Çalışma sorusu ${state.index + 1} / ${questions.length}`} />
+      <button className="text-button" onClick={onBack}><ArrowLeft size={17} />{t("resultsBack")}</button>
+      <div className="study-topline"><span className="eyebrow">{t("practiceEyebrow")}</span><span>{t("progress", { n: state.index + 1, total: questions.length })}</span></div>
+      <p className="study-mode">{t("untimed")}</p>
+      <progress className="question-progress" value={state.index + 1} max={questions.length} aria-label={t("practiceProgress", { n: state.index + 1, total: questions.length })} />
       <h1 id="study-title" ref={heading} tabIndex={-1}>{question.question}</h1>
       {question.image && <QuestionImage key={question.id} image={question.image} showCredit={locked} />}
-      <div className="choices" role="group" aria-label="Cevap seçenekleri">
-        {question.choices.map((choice, index) => {
-          const correct = locked && choice.id === question.correctAnswer;
-          const wrong = locked && choice.id === state.selectedId && !correct;
-          return <button key={choice.id} className={`choice ${correct ? "correct" : ""} ${wrong ? "incorrect" : ""}`} disabled={locked} onClick={() => dispatch({ type: "answer", questionId: question.id, selectedId: choice.id })}>
-            <span className="choice-letter" aria-hidden="true">{"ABCD"[index]}</span>
-            <span className="choice-text">{choice.text}</span>
-            {correct && <><Check className="choice-state" size={20} /><span className="sr-only">Doğru cevap</span></>}
-            {wrong && <><X className="choice-state" size={20} /><span className="sr-only">Yanlış cevabın</span></>}
-          </button>;
-        })}
-      </div>
+      <QuestionAnswer key={question.id} question={question} locked={locked} selectedId={state.selectedId}
+        initialText={state.response?.type === "text" ? state.response.value : ""}
+        onAnswer={(response, selectedId) => {
+          if (evaluateQuestion(question, response)?.isCorrect) onCorrect?.(question.id);
+          dispatch({ type: "answer", questionId: question.id, selectedId, response });
+        }} />
       {locked && <div className="feedback" role="status">
-        <div className="feedback-heading">{state.selectedId === question.correctAnswer ? <Check size={21} /> : <Lightbulb size={21} />}<h2>{state.selectedId === question.correctAnswer ? "Doğru bildin!" : "Doğru cevap"}</h2></div>
-        <p><b>{question.choices.find((choice) => choice.id === question.correctAnswer)?.text}.</b> {question.explanation}</p>
-        <a href={question.sourceUrl} target="_blank" rel="noreferrer">Kaynağı incele <ExternalLink size={13} /><span className="sr-only"> (yeni sekmede açılır)</span></a>
+        <div className="feedback-heading">{evaluateQuestion(question, state.response ?? { type: "choice", id: state.selectedId ?? "" })?.isCorrect ? <Check size={21} /> : <Lightbulb size={21} />}<h2>{evaluateQuestion(question, state.response ?? { type: "choice", id: state.selectedId ?? "" })?.isCorrect ? t("practiceCorrect") : t("correctAnswer")}</h2></div>
+        <p><b>{correctAnswerText(question)}.</b> {solutionDetail(question) && <>{solutionDetail(question)} </>}{question.explanation}</p>
+        <a href={question.sourceUrl} target="_blank" rel="noreferrer">{t("source")}<ExternalLink size={13} /><span className="sr-only">{t("newTab")}</span></a>
       </div>}
-      {locked && <div className="next-row"><span>Süresiz çalışma · Puan yok</span><button className="button primary" onClick={() => dispatch({ type: "next", questionId: question.id })}>{state.index === questions.length - 1 ? "Çalışmayı Bitir" : "Sonraki Soru"} <ArrowRight size={18} /></button></div>}
+      {locked && <div className="next-row"><span>{t("practiceNote")}</span><button className="button primary" onClick={() => dispatch({ type: "next", questionId: question.id })}>{state.index === questions.length - 1 ? t("finishPractice") : t("next")} <ArrowRight size={18} /></button></div>}
     </section>
   );
 }

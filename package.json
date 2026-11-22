@@ -9,9 +9,25 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:membership": "node scripts/test-membership.mjs",
+    "android:sync": "node scripts/android.mjs sync",
+    "android:apk": "node scripts/android.mjs apk",
+    "android:open": "cap open android"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "11.1.1"
+    }
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/browser": "8.0.4",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/filesystem": "^8.1.3",
+    "@capacitor/share": "8.0.2",
+    "@supabase/supabase-js": "2.117.2",
     "lucide-react": "1.48.0",
     "next": "16.3.6",
     "react": "19.3.0",
@@ -19,6 +35,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@capacitor/cli": "8.5.2",
+    "@electric-sql/pglite": "0.5.8",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.3",

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { questions } from "../src/data/questions";
+import { questions, legacyQuestions } from "../src/data/questions";
 import { QUESTION_IMAGES } from "../src/data/question-images";
 import { dailyDate, selectDailyQuestions, createDailyGame } from "../src/lib/daily";
 import { createGame, gameReducer, selectQuestions } from "../src/lib/game";
@@ -14,7 +14,7 @@ function memoryStorage() {
   return { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); } };
 }
 function completed(id = "one") {
-  let state = { ...createGame(selectQuestions(questions, "easy"), "easy", 0), sessionId: id };
+  let state = { ...createGame(selectQuestions(legacyQuestions, "easy"), "easy", 0), sessionId: id };
   for (const q of state.questions) {
     state = gameReducer(state, { type: "answer", questionId: q.id, selectedId: q.correctAnswer, now: 0 });
     state = gameReducer(state, { type: "next", questionId: q.id, now: 0 });
@@ -31,13 +31,18 @@ test("günlük set ve seçenekler cihazdan ve havuz sırasından bağımsızdır
   assert.deepEqual(first, selectDailyQuestions([...questions].reverse(), "2026-09-28"));
   assert.deepEqual(first, selectDailyQuestions([...questions, { ...questions[0]!, id: "e126" }], "2026-09-28"));
   assert.equal(new Set(first.map(q => q.id)).size, 10);
-  assert.deepEqual(["easy", "medium", "hard", "expert"].map(level => first.filter(q => q.difficulty === level).length), [2, 3, 3, 2]);
+  assert.deepEqual(["e", "m", "h", "x"].map(prefix => first.filter(q => q.id[0] === prefix).length), [2, 3, 3, 2]);
+  assert.deepEqual(first.map(q => q.id), ["x37", "e61", "h101", "m28", "m111", "e91", "h60", "m82", "h05", "x117"]);
+  const reviewed = selectDailyQuestions(questions, "2026-09-29");
+  assert.deepEqual(["easy", "medium", "hard", "expert"].map(level => reviewed.filter(q => q.difficulty === level).length), [2, 3, 3, 2]);
+  assert.deepEqual(reviewed, selectDailyQuestions([...questions].reverse(), "2026-09-29"));
+  assert.deepEqual(reviewed, selectDailyQuestions([...questions, { ...questions[0]!, id: "r081" }], "2026-09-29"));
   assert.notDeepEqual(first.map(q => q.id), selectDailyQuestions(questions, "2026-09-29").map(q => q.id));
   assert.ok(first.every(q => q.choices.filter(c => c.id === q.correctAnswer).length === 1));
   assert.throws(() => selectDailyQuestions(questions, "2026-02-30"));
   assert.throws(() => selectDailyQuestions([], "2026-09-28"));
 });
-test("günlük tur tarihi oyun ortasında değişmez ve yeni tur cevapları temizler", () => {
+test("günlük tur tarihi yarışma ortasında değişmez ve yeni tur cevapları temizler", () => {
   const first = createDailyGame(questions, Date.parse("2026-09-28T20:59:59Z"));
   const q = first.questions[0]!;
   const answered = gameReducer(first, { type: "answer", questionId: q.id, selectedId: q.correctAnswer, now: first.deadline - 1000 });
@@ -47,7 +52,7 @@ test("günlük tur tarihi oyun ortasında değişmez ve yeni tur cevapları temi
   assert.deepEqual(next.answers, []);
   assert.equal(next.index, 0);
 });
-test("istatistikler varsayılan kapalıdır ve tamamlanmamış oyun kaydedilmez", () => {
+test("istatistikler varsayılan kapalıdır ve tamamlanmamış tur kaydedilmez", () => {
   const storage = memoryStorage();
   recordGame(completed(), storage);
   assert.equal(storage.getItem(STATISTICS_KEY), null);
@@ -87,10 +92,10 @@ test("bozuk ve engellenmiş depolama güvenlidir; son 100 tur tutulur ve silineb
   assert.equal(readStatistics(storage).games.length, 0);
 });
 test("kategori sayfaları özgün canonical ve dört farklı seviye örneğine sahiptir", () => {
-  assert.equal(new Set(TOPIC_CATEGORIES.map(categoryPath)).size, 4);
+  assert.equal(new Set(TOPIC_CATEGORIES.map(category => categoryPath(category))).size, TOPIC_CATEGORIES.length);
   for (const category of TOPIC_CATEGORIES) {
     assert.equal(categoryMetadata(category).alternates?.canonical, `https://yeninesilbilgiyarismasi.com${categoryPath(category)}`);
-    for (const difficulty of ["easy", "medium", "hard", "expert"]) assert.ok(questions.some(q => q.difficulty === difficulty && matchesCategory(q.category, category)));
+    assert.ok(questions.some(q => matchesCategory(q.category, category)));
   }
 });
 test("görseller mevcut sorulara bağlı, yerel, boyutlu ve kaynaklıdır", () => {

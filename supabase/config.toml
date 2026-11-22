@@ -1,0 +1,5 @@
+project_id = "yeni-nesil-bilgi-yarismasi"
+
+# Require a user JWT at the gateway; the handler also verifies it and the password.
+[functions.delete-account]
+verify_jwt = true

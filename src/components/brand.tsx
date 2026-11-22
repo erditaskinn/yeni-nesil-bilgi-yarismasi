@@ -1,15 +1,9 @@
-export function Brand() {
+import Image from "next/image";
+import { translate, type Locale } from "../lib/locale";
+export function Brand({ locale = "tr" }: { locale?: Locale }) {
   return (
     <span className="brand">
-      <span className="brand-mark" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <i />
-      </span>
-      <span>
-        Yeni Nesil<span className="brand-subtitle">Bilgi Yarışması</span>
-      </span>
+      <Image className="brand-logo" src="/logo-brand.webp" width={900} height={251} alt={translate(locale, "brand")} unoptimized />
     </span>
   );
 }

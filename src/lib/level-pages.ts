@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { LEVELS, type Difficulty } from "./config";
+import { type Difficulty } from "./config";
+import { levelInfo, translate, type Locale } from "./locale";
+import { ENGLISH_LEVEL_PAGES } from "./english-pages";
+import { localizedMetadata } from "./site-metadata";
 
 export const LEVEL_PAGES: Record<Difficulty, {
   slug: string;
@@ -10,8 +13,8 @@ export const LEVEL_PAGES: Record<Difficulty, {
   easy: {
     slug: "kolay-bilgi-yarismasi",
     intro: "Genel kültür sorularına keyifli bir başlangıç yap. Bilim, coğrafya, sanat ve tarihten tanıdık konularla bilgini sınarken yeni ayrıntılar öğren.",
-    details: "Kolay seviyede hız kadar dikkat de önemli. Her turda bu seviyenin soru havuzundan rastgele 10 farklı soru seçilir. Cevabının ardından doğru seçenek ve kısa bir açıklama gösterilir.",
-    sampleIds: ["e01", "e04", "e11"],
+    details: "Kolay seviyede hız kadar dikkat de önemli. Her turda bu seviyenin soru havuzundan seçtiğin tur uzunluğuna göre farklı sorular seçilir. Cevabının ardından doğru seçenek ve kısa bir açıklama gösterilir.",
+    sampleIds: ["e01", "r021", "e11"],
   },
   medium: {
     slug: "orta-bilgi-yarismasi",
@@ -23,33 +26,29 @@ export const LEVEL_PAGES: Record<Difficulty, {
     slug: "zor-bilgi-yarismasi",
     intro: "Ayrıntıları hatırlamak ve seçenekleri dikkatle karşılaştırmak isteyenler için. Zor seviyede sanat eserleri, tarihî yerler ve bilimsel bilgiler daha yakından sorulur.",
     details: "Her sorudan sonra verilen açıklama, yalnızca doğru seçeneği göstermekle kalmaz; cevabın arkasındaki kısa bilgiyi de paylaşır. Yanlış yanıtlar da bir sonraki tur için öğrenme fırsatıdır.",
-    sampleIds: ["h01", "h05", "h09"],
+    sampleIds: ["m14", "h05", "h09"],
   },
   expert: {
     slug: "cok-zor-bilgi-yarismasi",
     intro: "Merakını ayrıntılara taşı. Çok zor seviyede gezegenlerin özelliklerinden arkeolojik dönemlere, sanat tarihinden okyanus coğrafyasına kadar daha az bilinen bilgilerle karşılaşırsın.",
     details: "Soruların her biri dört seçeneklidir ve yalnızca tek doğru yanıtı vardır. Süre dolarsa doğru yanıt ve açıklaması yine gösterilir; böylece tur boyunca öğrenmeye devam edebilirsin.",
-    sampleIds: ["x02", "x07", "x12"],
+    sampleIds: ["x13", "x24", "x10"],
   },
 };
 
-export function levelPath(difficulty: Difficulty): string {
-  return `/${LEVEL_PAGES[difficulty].slug}`;
+export function levelPage(difficulty: Difficulty, locale: Locale = "tr") {
+  return locale === "en" ? { ...LEVEL_PAGES[difficulty], ...ENGLISH_LEVEL_PAGES[difficulty] } : LEVEL_PAGES[difficulty];
 }
-
-export function levelTitle(difficulty: Difficulty): string {
-  return `${LEVELS[difficulty].label} Bilgi Yarışması`;
+export function levelPath(difficulty: Difficulty, locale: Locale = "tr"): string {
+  return `${locale === "en" ? "/en" : ""}/${levelPage(difficulty, locale).slug}`;
 }
-
-export function levelMetadata(difficulty: Difficulty): Metadata {
-  const title = levelTitle(difficulty);
-  const description = LEVEL_PAGES[difficulty].intro;
-  const path = levelPath(difficulty);
-  return {
-    title: `${title} | Yeni Nesil Bilgi Yarışması`,
-    description,
-    alternates: { canonical: path },
-    openGraph: { title, description, url: path, images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "Yeni Nesil Bilgi Yarışması" }] },
-    twitter: { card: "summary_large_image", title, description, images: ["/opengraph-image.png"] },
+export function levelTitle(difficulty: Difficulty, locale: Locale = "tr"): string {
+  return `${levelInfo(locale, difficulty).label} ${locale === "en" ? "Trivia Quiz" : "Bilgi Yarışması"}`;
+}
+export function levelMetadata(difficulty: Difficulty, locale: Locale = "tr"): Metadata {
+  if (difficulty === "expert") return {
+    ...localizedMetadata(locale, `${levelTitle("hard", locale)} | ${translate(locale, "brand")}`, levelPage("hard", locale).intro, levelPath("hard"), levelPath("hard", "en")),
+    robots: { index: false, follow: true },
   };
+  return localizedMetadata(locale, `${levelTitle(difficulty, locale)} | ${translate(locale, "brand")}`, levelPage(difficulty, locale).intro, levelPath(difficulty), levelPath(difficulty, "en"));
 }

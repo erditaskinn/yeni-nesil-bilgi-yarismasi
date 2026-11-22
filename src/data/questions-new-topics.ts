@@ -1,0 +1,77 @@
+import type { Difficulty } from "../lib/config";
+import type { Question } from "../lib/types";
+
+const sources = {
+  cern: "https://home.cern/science/computing/the-birth-of-the-web/short-history-web/",
+  w3c: "https://www.w3.org/wiki/The_web_standards_model_-_HTML_CSS_and_JavaScript",
+  mouse: "https://computerhistory.org/sri-mouse-mn052024/",
+  chip: "https://www.computerhistory.org/timeline/1971/",
+  network: "https://www.computerhistory.org/timeline/networking-the-web/",
+  computers: "https://www.computerhistory.org/timeline/1977/",
+  oscars1929: "https://www.oscars.org/oscars/ceremonies/1929",
+  oscars1998: "https://www.oscars.org/oscars/ceremonies/1998",
+  oscars2003: "https://www.oscars.org/oscars/ceremonies/2003",
+  oscars2004: "https://www.oscars.org/oscars/ceremonies/2004",
+  oscars2009: "https://www.oscars.org/oscars/ceremonies/2009",
+  oscars2014: "https://www.oscars.org/oscars/ceremonies/2014",
+  oscars2019: "https://www.oscars.org/oscars/ceremonies/2019",
+  oscars2020: "https://www.oscars.org/oscars/ceremonies/2020",
+  emmy: "https://www.televisionacademy.com/academy/about/history",
+  emmyFirst: "https://www.televisionacademy.com/features/news/online-originals/first-things-first",
+  emmy2014: "https://www.televisionacademy.com/awards/nominees-winners/2014/outstanding-drama-series",
+  emmy2019: "https://www.televisionacademy.com/shows/game-thrones",
+  emmySuccession: "https://www.televisionacademy.com/features/news/awards-news/emmys-240115",
+} as const;
+
+function q(id: string, difficulty: Difficulty, category: "technology" | "cinema_television", question: string,
+  options: [string, string, string, string], explanation: string, source: keyof typeof sources): Question {
+  return {
+    id, difficulty, category, question,
+    choices: options.map((text, index) => ({ id: `${id}-${index}`, text })) as unknown as Question["choices"],
+    correctAnswer: `${id}-0`, explanation, sourceUrl: sources[source], reviewedAt: "2026-09-30",
+  };
+}
+
+// New IDs are independent of the original 580-question bank. The first option is correct before shuffle.
+export const newTopicQuestions: readonly Question[] = [
+  q("t001", "easy", "technology", "World Wide Web'i geliştiren bilim insanı kimdir?", ["Tim Berners-Lee", "Alan Turing", "Bill Gates", "Steve Jobs"], "Tim Berners-Lee, Web'i CERN'de çalışırken geliştirdi.", "cern"),
+  q("t002", "easy", "technology", "World Wide Web hangi araştırma merkezinde geliştirildi?", ["CERN", "NASA", "MIT", "ESA"], "Web, bilim insanları arasında bilgi paylaşımı için CERN'de doğdu.", "cern"),
+  q("t003", "easy", "technology", "Tim Berners-Lee Web önerisini ilk kez hangi yılda sundu?", ["1989", "1971", "1999", "2005"], "İlk World Wide Web önerisi Mart 1989'da hazırlandı.", "cern"),
+  q("t004", "easy", "technology", "Bir web sayfasının içeriğini ve yapısını hangi dil tanımlar?", ["HTML", "CSS", "SQL", "PNG"], "HTML, web belgelerinin içerik ve yapısını oluşturur.", "w3c"),
+  q("t005", "easy", "technology", "Web sayfasının görünüm ve düzeni için hangi teknoloji kullanılır?", ["CSS", "HTML", "HTTP", "JPEG"], "CSS, HTML içeriğinin görünümünü ve düzenini belirler.", "w3c"),
+  q("t006", "easy", "technology", "Web sayfasına etkileşim eklemek için yaygın kullanılan dil hangisidir?", ["JavaScript", "JPEG", "PDF", "CSS"], "JavaScript, web sayfalarında davranış ve etkileşim sağlar.", "w3c"),
+  q("t007", "easy", "technology", "Bilgisayar faresinin öncüsü olan aygıt hangi amaçla kullanılır?", ["Ekranda işaretleme yapmak", "Kâğıda baskı yapmak", "Ses kaydetmek", "Ağ kablosu bağlamak"], "Fare, ekrandaki öğeleri işaretlemeye yarayan bir giriş aygıtıdır.", "mouse"),
+  q("t008", "easy", "technology", "Intel 4004 hangi tür bilgisayar bileşenidir?", ["Mikroişlemci", "Monitör", "Yazıcı", "Sabit disk"], "Intel 4004, erken ticari mikroişlemcilerden biridir.", "chip"),
+  q("t009", "easy", "technology", "E-posta adreslerinde kullanılan @ işaretini ağ postası için kim seçti?", ["Ray Tomlinson", "Tim Berners-Lee", "Douglas Engelbart", "Federico Faggin"], "Ray Tomlinson, ağ üzerinden e-posta adreslemesinde @ işaretini kullandı.", "network"),
+  q("t010", "easy", "technology", "1977'de tanıtılan kişisel bilgisayarlardan biri hangisidir?", ["Apple II", "iMac G3", "MacBook Air", "IBM PC AT"], "Apple II, 1977'de tanıtılan kişisel bilgisayarlardan biriydi.", "computers"),
+  q("t011", "medium", "technology", "İlk web sunucusu hangi marka bilgisayarda çalışıyordu?", ["NeXT", "Commodore", "Atari", "Tandy"], "CERN'deki ilk web sunucusu bir NeXT bilgisayarda çalışıyordu.", "cern"),
+  q("t012", "medium", "technology", "CERN'de ilk web sunucusu ve tarayıcısı hangi yılın sonunda çalışıyordu?", ["1990", "1980", "2000", "2010"], "Tim Berners-Lee, 1990 sonunda ilk sunucu ve tarayıcıyı çalıştırmıştı.", "cern"),
+  q("t013", "medium", "technology", "CERN, Web'in kaynak kodunu telifsiz kullanıma hangi yılda açtı?", ["1993", "1989", "2001", "2013"], "CERN, WorldWideWeb kaynak kodunu 30 Nisan 1993'te serbestçe kullanılabilir kıldı.", "cern"),
+  q("t014", "medium", "technology", "Mosaic tarayıcısının ilk sürümünü hangi kurum yayımladı?", ["NCSA", "CERN", "NASA", "UNESCO"], "Illinois Üniversitesi'ndeki NCSA, Mosaic'in ilk sürümünü 1993'te yayımladı.", "cern"),
+  q("t015", "medium", "technology", "İlk web sitesinin adresi hangi alan adıyla başlıyordu?", ["info.cern.ch", "web.nasa.gov", "www.w3.org", "museum.org"], "CERN'e göre dünyanın ilk web sitesinin adresi info.cern.ch idi.", "cern"),
+  q("t016", "medium", "technology", "Intel 4004 işlemcisi verileri kaç bitlik parçalar halinde işliyordu?", ["4 bit", "8 bit", "16 bit", "64 bit"], "Computer History Museum, 4004'ün dört bitlik işlemler yaptığını kaydeder.", "chip"),
+  q("t017", "medium", "technology", "Intel 4004 ilk olarak hangi ürün türü için geliştirildi?", ["Hesap makinesi", "Oyun konsolu", "Televizyon", "Lazer yazıcı"], "4004, Japon Busicom firmasının hesap makinesi için geliştirildi.", "chip"),
+  q("t018", "medium", "technology", "Ethernet başlangıçta hangi tür ağlar için geliştirildi?", ["Yerel alan ağları", "Uydu yayınları", "Mobil telefon şebekeleri", "Radyo istasyonları"], "Ethernet, aynı ortamda bulunan bilgisayarları bağlayan yerel ağlar için geliştirildi.", "network"),
+  q("t019", "medium", "technology", "Commodore PET'in yerleşik veri depolama birimi neydi?", ["Kaset sürücüsü", "Blu-ray sürücüsü", "SSD", "DVD sürücüsü"], "1977'de tanıtılan PET'in kasetli veri depolama sistemi vardı.", "computers"),
+  q("t020", "medium", "technology", "Atari 2600 oyun yazılımlarını hangi değiştirilebilir ortamda sunuyordu?", ["ROM kartuş", "CD-ROM", "Disket", "Bulut depolama"], "Atari VCS/2600, oyunlarını değiştirilebilir ROM kartuşlarda sunuyordu.", "computers"),
+  q("f001", "easy", "cinema_television", "İlk Akademi Ödülleri'nde En İyi Film ödülünü hangi yapım kazandı?", ["Wings", "Titanic", "Casablanca", "Parasite"], "1929'daki ilk törende En İyi Film ödülünü Wings kazandı.", "oscars1929"),
+  q("f002", "easy", "cinema_television", "İlk Oscar töreni hangi yılda yapıldı?", ["1929", "1895", "1953", "1977"], "İlk Akademi Ödülleri töreni 16 Mayıs 1929'da düzenlendi.", "oscars1929"),
+  q("f003", "easy", "cinema_television", "Titanic filminin yönetmeni kimdir?", ["James Cameron", "Steven Spielberg", "Peter Jackson", "Christopher Nolan"], "James Cameron, Titanic ile yönetmenlik Oscar'ını kazandı.", "oscars1998"),
+  q("f004", "easy", "cinema_television", "Parasite filminin yönetmeni kimdir?", ["Bong Joon Ho", "Hayao Miyazaki", "Alfonso Cuarón", "Danny Boyle"], "Bong Joon Ho, Parasite ile 2020 yönetmenlik Oscar'ını kazandı.", "oscars2020"),
+  q("f005", "easy", "cinema_television", "2020 Oscar töreninde En İyi Film ödülünü hangi yapım kazandı?", ["Parasite", "Joker", "1917", "The Irishman"], "2020 En İyi Film Oscar'ı Parasite'e verildi.", "oscars2020"),
+  q("f006", "easy", "cinema_television", "The Lord of the Rings: The Return of the King hangi Oscar'ı kazandı?", ["En İyi Film", "En İyi Belgesel", "En İyi Kısa Film", "En İyi Animasyon"], "The Return of the King, 2004'te En İyi Film ödülünü kazandı.", "oscars2004"),
+  q("f007", "easy", "cinema_television", "2003'te Animasyon Film Oscar'ını hangi film kazandı?", ["Spirited Away", "Frozen", "Shrek", "Toy Story 4"], "Hayao Miyazaki'nin Spirited Away filmi 2003'te bu ödülü kazandı.", "oscars2003"),
+  q("f008", "easy", "cinema_television", "Frozen hangi dalda Oscar kazandı?", ["Animasyon Film", "En İyi Film", "Belgesel Film", "Yabancı Dilde Film"], "Frozen, 2014'te Animasyon Film ödülünü kazandı.", "oscars2014"),
+  q("f009", "easy", "cinema_television", "2020 Animasyon Film Oscar'ını hangi yapım kazandı?", ["Toy Story 4", "Frozen II", "I Lost My Body", "How to Train Your Dragon: The Hidden World"], "Akademi, 2020 Animasyon Film ödülünü Toy Story 4'e verdi.", "oscars2020"),
+  q("f010", "easy", "cinema_television", "Emmy Ödülleri hangi yayın alanındaki başarıları kutlar?", ["Televizyon", "Radyo", "Sinema", "Tiyatro"], "Television Academy, Emmy Ödülleri'ni televizyon çalışmalarını onurlandırmak için verir.", "emmy"),
+  q("f011", "medium", "cinema_television", "İlk Oscar töreni hangi otelde düzenlendi?", ["Hollywood Roosevelt Hotel", "Beverly Hilton", "Waldorf Astoria", "Cecil Hotel"], "1929 töreni Hollywood Roosevelt Hotel'in Blossom Room salonundaydı.", "oscars1929"),
+  q("f012", "medium", "cinema_television", "Titanic, 1998 töreninde kaç Oscar kazandı?", ["11", "7", "9", "14"], "Titanic, 14 adaylıktan 11 ödül kazandı.", "oscars1998"),
+  q("f013", "medium", "cinema_television", "The Return of the King, 2004'te aday olduğu 11 dalın kaçını kazandı?", ["11", "8", "9", "10"], "Film, aday gösterildiği 11 dalın tamamında ödül aldı.", "oscars2004"),
+  q("f014", "medium", "cinema_television", "Parasite, 2020'de hangi ülke adına Uluslararası Film Oscar'ını kazandı?", ["Güney Kore", "Japonya", "Çin", "Tayland"], "Parasite, Güney Kore adına Uluslararası Film ödülünü kazandı.", "oscars2020"),
+  q("f015", "medium", "cinema_television", "Joker ile 2020'de başrol oyuncusu Oscar'ını kim kazandı?", ["Joaquin Phoenix", "Brad Pitt", "Adam Driver", "Leonardo DiCaprio"], "Joaquin Phoenix, Joker'daki rolüyle En İyi Erkek Oyuncu seçildi.", "oscars2020"),
+  q("f016", "medium", "cinema_television", "Frozen'daki hangi şarkı 2014'te özgün şarkı Oscar'ını kazandı?", ["Let It Go", "Happy", "Into the Unknown", "Remember Me"], "Let It Go, 2014 Özgün Şarkı Oscar'ını kazandı.", "oscars2014"),
+  q("f017", "medium", "cinema_television", "Slumdog Millionaire'in Oscar ödüllü özgün müziğini kim besteledi?", ["A.R. Rahman", "Hans Zimmer", "John Williams", "Howard Shore"], "A.R. Rahman, filmin özgün müziğiyle 2009'da Oscar kazandı.", "oscars2009"),
+  q("f018", "medium", "cinema_television", "İlk Emmy Ödülleri hangi yılda düzenlendi?", ["1949", "1929", "1969", "1989"], "İlk Emmy töreni 25 Ocak 1949'da yapıldı.", "emmy"),
+  q("f019", "medium", "cinema_television", "2014 Emmy Ödülleri'nde En İyi Drama Dizisi hangisiydi?", ["Breaking Bad", "Game of Thrones", "House of Cards", "Downton Abbey"], "Television Academy'nin 2014 Drama Dizisi kazananı Breaking Bad'di.", "emmy2014"),
+  q("f020", "medium", "cinema_television", "İlk Emmy Ödülü'nü kazanan televizyon kişiliği kimdi?", ["Shirley Dinsdale", "Lucille Ball", "Betty White", "Carol Burnett"], "Shirley Dinsdale, Judy Splinters adlı kuklasıyla ilk Emmy'yi kazandı.", "emmyFirst"),
+];

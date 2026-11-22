@@ -1,0 +1,133 @@
+import type { GameCategory } from "../lib/categories";
+import type { Difficulty } from "../lib/config";
+import type { Question } from "../lib/types";
+
+const sources = {
+  roots: "https://hort.extension.wisc.edu/essentials-of-green-growing-plants/",
+  ears: "https://www.who.int/news-room/questions-and-answers/item/deafness-and-hearing-loss-ear-care",
+  lungs: "https://www.who.int/health-topics/lung-health",
+  eyes: "https://www.nei.nih.gov/learn-about-eye-health/healthy-vision",
+  butterflies: "https://www.fs.usda.gov/wildflowers/pollinators/animals/butterflies.shtml",
+  portugal: "https://www.britannica.com/place/Portugal",
+  fuji: "https://www.britannica.com/place/Mount-Fuji",
+  antarctica: "https://www.britannica.com/place/Antarctica",
+  equator: "https://education.nationalgeographic.org/resource/equator/",
+  mediterranean: "https://www.britannica.com/place/Mediterranean-Sea",
+  montSaintMichel: "https://whc.unesco.org/en/list/80/",
+  alhambra: "https://whc.unesco.org/en/list/314/",
+  versailles: "https://whc.unesco.org/en/list/83/",
+  pisa: "https://whc.unesco.org/en/list/395/",
+  greatZimbabwe: "https://whc.unesco.org/en/list/364/",
+  collage: "https://www.britannica.com/art/collage",
+  pottery: "https://www.metmuseum.org/essays/a-history-of-pottery",
+  conductor: "https://www.britannica.com/art/conducting-music",
+  ballet: "https://www.britannica.com/art/ballet",
+  costume: "https://www.getty.edu/education/teachers/classroom_resources/",
+  badminton: "https://system.bwfbadminton.com/documents/folder_1_81/Regulations/Laws/Part%20II%20Section%201A%20-%20Laws%20of%20Badminton%20-%20June%202016%20Revised%202.pdf",
+  volleyball: "https://www.fivb.com/volleyball/the-game/official-volleyball-rules/",
+  cycling: "https://olympics.com/en/sports/cycling-road/",
+  skiing: "https://olympics.com/en/sports/skiing/",
+  boxing: "https://olympics.com/en/sports/boxing/",
+  computer: "https://edu.gcfglobal.org/en/computerbasics/",
+  microphone: "https://edu.gcfglobal.org/en/computerbasics/using-accessibility-features/1/",
+  headphones: "https://edu.gcfglobal.org/en/computerbasics/",
+  touchscreen: "https://edu.gcfglobal.org/en/computerbasics/",
+  wifi: "https://edu.gcfglobal.org/en/computerbasics/connecting-to-the-internet/1/",
+  subtitles: "https://whatson.bfi.org.uk/Online/default.asp?BOparam%3A%3AWScontent%3A%3AloadArticle%3A%3Acontext_id=&BOparam%3A%3AWScontent%3A%3AloadArticle%3A%3Apermalink=accessible-films-screenings-and-events-southbank",
+  documentary: "https://player.bfi.org.uk/rentals/film/watch-sleep-furiously-2007-online",
+  credits: "https://www.bfi.org.uk/bfi-film-releases/name-me-lawand",
+  soundtrack: "https://player.bfi.org.uk/subscription/collection/soundtracks",
+  television: "https://www.britannica.com/technology/remote-control",
+  tdkPunctuation: "https://tdk.gov.tr/icerik/yazim-kurallari/noktalama-isaretleri-aciklamalar/",
+  tdkDictionary: "https://sozluk.gov.tr/",
+  fable: "https://www.britannica.com/art/fable",
+  story: "https://www.britannica.com/art/short-story",
+  istiklal: "https://tdk.gov.tr/genel/istiklal-marsi/",
+  karagoz: "https://ich.unesco.org/en/RL/karagz-turkish-shadow-theatre-00180",
+  tea: "https://ich.unesco.org/en/RL/culture-of-cay-tea-a-symbol-of-identity-hospitality-and-social-interaction-01685?RL=01685",
+  baklava: "https://ci.gaziantep.bel.tr/cografi-isaretli-urunler/antep-baklavasi",
+  oilWrestling: "https://ich.unesco.org/en/RL/krkpn-oil-wrestling-festival-00386",
+  time: "https://www.timeanddate.com/time/",
+  calendar: "https://www.timeanddate.com/calendar/",
+  geometry: "https://www.britannica.com/science/triangle",
+  bicycle: "https://www.britannica.com/technology/bicycle",
+  clock: "https://www.nist.gov/pml/time-and-frequency-division/time-realization/seconds",
+} as const;
+
+type Source = keyof typeof sources;
+type Category = Exclude<GameCategory, "mixed">;
+type Row = readonly [string, Category, string, readonly [string, string, string, string], string, Source];
+
+const rows: readonly Row[] = [
+  ["tfe051", "science_nature", "Bir bitkinin kökleri topraktan en çok neyi alır?", ["Suyu", "Işığı", "Sesi", "Rüzgârı"], "Bitki kökleri topraktan suyu ve çözünmüş mineralleri emer.", "roots"],
+  ["tfe052", "science_nature", "İnsanlar sesleri duymak için hangi organlarını kullanır?", ["Kulaklarını", "Dizlerini", "Dirseklerini", "Ayaklarını"], "Kulaklar işitmemizi sağlar.", "ears"],
+  ["tfe053", "science_nature", "Nefes alıp vermemizde başlıca görev alan organlar hangileridir?", ["Akciğerler", "Mide", "Kalp", "Böbrekler"], "Akciğerler, normal solunum ve gaz alışverişi için gereklidir.", "lungs"],
+  ["tfe054", "science_nature", "Görme duyumuz için hangi organlarımızı kullanırız?", ["Gözlerimizi", "Kulaklarımızı", "Ellerimizi", "Dilimizi"], "Gözler görmemizi sağlar.", "eyes"],
+  ["tfe055", "science_nature", "Kelebeklerin larvalarına ne ad verilir?", ["Tırtıl", "Yavru kuş", "Balık", "Kurbağa"], "Kelebeklerin larva evresine tırtıl denir.", "butterflies"],
+
+  ["tfe056", "geography", "Portekiz'in başkenti hangi şehirdir?", ["Lizbon", "Madrid", "Roma", "Atina"], "Portekiz'in başkenti Lizbon'dur.", "portugal"],
+  ["tfe057", "geography", "Fuji Dağı hangi ülkededir?", ["Japonya", "Çin", "Nepal", "Tayland"], "Fuji Dağı Japonya'da bulunur.", "fuji"],
+  ["tfe058", "geography", "Ekvator, Dünya'yı hangi iki yarım küreye ayırır?", ["Kuzey ve Güney", "Doğu ve Batı", "Kara ve Deniz", "Dağlık ve Düzlük"], "Ekvator, Dünya'yı Kuzey ve Güney yarım kürelerine ayırır.", "equator"],
+  ["tfe059", "geography", "Dünya'nın en soğuk kıtası hangisidir?", ["Antarktika", "Afrika", "Avrupa", "Güney Amerika"], "Antarktika, Dünya'nın en soğuk kıtasıdır.", "antarctica"],
+  ["tfe060", "geography", "Akdeniz, Avrupa ile hangi kıta arasında yer alır?", ["Afrika", "Kuzey Amerika", "Antarktika", "Okyanusya"], "Akdeniz, Avrupa'nın güneyi ile Afrika'nın kuzeyi arasında uzanır.", "mediterranean"],
+
+  ["tfe061", "history", "Mont-Saint-Michel tarihî adası hangi ülkededir?", ["Fransa", "İtalya", "Yunanistan", "Portekiz"], "Mont-Saint-Michel ve çevresindeki tarihî alan Fransa'dadır.", "montSaintMichel"],
+  ["tfe062", "history", "Elhamra Sarayı hangi İspanyol şehrindedir?", ["Granada", "Barselona", "Sevilla", "Valensiya"], "Elhamra Sarayı, İspanya'nın Granada şehrindedir.", "alhambra"],
+  ["tfe063", "history", "Versay Sarayı hangi ülkededir?", ["Fransa", "Almanya", "Avusturya", "İsveç"], "Versay Sarayı, Fransa'daki tarihî bir saraydır.", "versailles"],
+  ["tfe064", "history", "Great Zimbabwe tarihî alanı hangi ülkededir?", ["Zimbabve", "Kenya", "Fas", "Gana"], "Great Zimbabwe, günümüzde Zimbabve sınırları içindedir.", "greatZimbabwe"],
+  ["tfe065", "history", "Eğik Kulesi'yle tanınan Pisa şehri hangi ülkededir?", ["İtalya", "Fransa", "Portekiz", "Hollanda"], "Pisa ve ünlü Eğik Kulesi İtalya'dadır.", "pisa"],
+
+  ["tfe066", "arts_culture", "Farklı kâğıt veya kumaş parçalarını yapıştırarak bir görsel oluşturma tekniğine ne denir?", ["Kolaj", "Portre", "Peyzaj", "Gravür"], "Kolaj, farklı malzemelerin bir yüzeye birleştirilmesiyle oluşturulan sanat çalışmasıdır.", "collage"],
+  ["tfe067", "arts_culture", "Çömlek ve seramik yapımında temel olarak hangi malzeme kullanılır?", ["Kil", "Cam yünü", "Kâğıt", "Pamuk"], "Seramik ürünler çoğunlukla şekillendirilen kilin pişirilmesiyle yapılır.", "pottery"],
+  ["tfe068", "arts_culture", "Bir orkestrayı müzikal olarak yöneten kişiye ne denir?", ["Orkestra şefi", "Besteci", "Seyirci", "Biletçi"], "Orkestra şefi, müzisyenlerin birlikte ve uyumlu çalmasını yönetir.", "conductor"],
+  ["tfe069", "arts_culture", "Klasik balede dansçılar çoğunlukla hangi tür ayakkabıyla sahne alır?", ["Bale ayakkabısıyla", "Futbol kramponuyla", "Paletle", "Kayak botuyla"], "Bale dansçıları dansa uygun bale ayakkabıları giyer.", "ballet"],
+  ["tfe070", "arts_culture", "Bir tiyatro oyununda oyuncuların giydiği özel kıyafetlere ne denir?", ["Kostüm", "Dekor", "Bilet", "Perde"], "Kostüm, sahne yapımında oyuncuların giydiği kıyafettir.", "costume"],
+
+  ["tfe071", "sports", "Badminton oynarken rakibin sahasına gönderilen tüylü topa ne denir?", ["Tüy top", "Disk", "Ragbi topu", "Bilardo topu"], "Badmintonda oyuncular raketle tüy topu karşı sahaya gönderir.", "badminton"],
+  ["tfe072", "sports", "Voleybolda takımlar topu hangi engelin üzerinden karşı sahaya gönderir?", ["Ağın", "Kalecinin", "Potanın", "Çizginin"], "Voleybol sahası, takımlar arasında bulunan bir ağla ikiye ayrılır.", "volleyball"],
+  ["tfe073", "sports", "Bisiklet yarışında sporcular hangi araçla ilerler?", ["Bisikletle", "Kayakla", "Atla", "Tekneyle"], "Bisiklet yarışlarında sporcular bisiklet kullanır.", "cycling"],
+  ["tfe074", "sports", "Kayak sporu çoğunlukla hangi zeminde yapılır?", ["Kar üzerinde", "Çim üzerinde", "Kum üzerinde", "Asfalt yolda"], "Kayak, kar üzerinde yapılan bir kış sporudur.", "skiing"],
+  ["tfe075", "sports", "Boks yapan sporcular ellerini korumak için ne giyer?", ["Boks eldiveni", "Yüzme paleti", "Kask lambası", "Tenis raketi"], "Boksörler antrenman ve karşılaşmalarda ellerine boks eldiveni giyer.", "boxing"],
+
+  ["tfe076", "technology", "Fotoğraf çekmek için telefonda genellikle hangi parça kullanılır?", ["Kamera", "Hoparlör", "Klavye", "Pil kapağı"], "Telefon kamerası fotoğraf ve video çekebilir.", "computer"],
+  ["tfe077", "technology", "Bilgisayara ses kaydetmek veya sesle komut vermek için hangi aygıt kullanılır?", ["Mikrofon", "Yazıcı", "Ekran", "Fare altlığı"], "Mikrofon, bilgisayara ses girişi sağlar.", "microphone"],
+  ["tfe078", "technology", "Kulaklık temel olarak hangi işi yapmaya yarar?", ["Ses dinlemeye", "Yazı yazmaya", "Fotoğraf basmaya", "Ekran görüntüsü almaya"], "Kulaklık, sesi kullanıcının kulağına iletir.", "headphones"],
+  ["tfe079", "technology", "Telefon veya tablette ekrandaki simgeye dokunarak işlem yapmayı sağlayan ekran türü hangisidir?", ["Dokunmatik ekran", "Projektör", "Yazıcı", "Hoparlör"], "Dokunmatik ekran, parmakla dokunarak aygıtı kontrol etmeyi sağlar.", "touchscreen"],
+  ["tfe080", "technology", "Wi-Fi, cihazların ağa kablosuz bağlanmasını sağlayan bir teknoloji midir?", ["Evet", "Hayır, yalnızca yazıcı türüdür", "Hayır, bir pil çeşididir", "Hayır, ekran biçimidir"], "Wi-Fi, cihazların kablo kullanmadan yerel ağa bağlanmasını sağlar.", "wifi"],
+
+  ["tfe081", "cinema_television", "Yabancı dildeki bir filmde konuşmaların çevirisini ekranda okumaya ne yardımcı olur?", ["Altyazı", "Jenerik müziği", "Fragman", "Dekor"], "Altyazı, filmdeki konuşmaların metin olarak ekranda gösterilmesine yardımcı olur.", "subtitles"],
+  ["tfe082", "cinema_television", "Gerçek kişiler veya olaylar hakkında bilgi vermeyi amaçlayan film türü hangisidir?", ["Belgesel", "Müzikal", "Fantastik kurgu", "Çizgi film"], "Belgesel filmler gerçek kişiler, olaylar veya konular hakkında bilgi sunar.", "documentary"],
+  ["tfe083", "cinema_television", "Bir filmin sonunda görev alan kişilerin adlarının sıralandığı bölüme ne denir?", ["Jenerik", "Altyazı", "Fragman", "Sahne"], "Jenerikte film ekibinin ve oyuncuların adları listelenir.", "credits"],
+  ["tfe084", "cinema_television", "Bir filme eşlik eden müzik ve ses kayıtlarının tümüne genel olarak ne denir?", ["Film müziği", "Altyazı", "Kostüm", "Afiş"], "Film müziği, filmde kullanılan müzikleri kapsar.", "soundtrack"],
+  ["tfe085", "cinema_television", "Televizyon kumandası en sık hangi işi yapmak için kullanılır?", ["Kanal değiştirmek", "Kâğıt kesmek", "Fotoğraf çekmek", "Kapı açmak"], "Televizyon kumandası, kanal ve ses gibi ayarları uzaktan değiştirmeye yarar.", "television"],
+
+  ["tfe086", "language_literature", "Bir iş, oluş veya hareket bildiren sözcük türüne ne denir?", ["Fiil", "İsim", "Sıfat", "Bağlaç"], "İş, oluş veya hareket bildiren sözcük türüne fiil denir.", "tdkDictionary"],
+  ["tfe087", "language_literature", "Bir kelimenin anlamına bakmak için hangi kaynağa başvururuz?", ["Sözlüğe", "Takvime", "Haritaya", "Albüm kapağına"], "Sözlükte kelimelerin anlamları ve kullanımları bulunur.", "tdkDictionary"],
+  ["tfe088", "language_literature", "Bir masal ya da öyküde olayları yaşayan kişilere ne denir?", ["Karakterler", "Hece ölçüsü", "Noktalama", "Başlıklar"], "Öykü ve masallarda olayların içinde yer alan kişilere karakter denir.", "story"],
+  ["tfe089", "language_literature", "Hayvanları konuşturup ders veren kısa anlatılara ne denir?", ["Fabl", "Haber", "Dilekçe", "Kullanım kılavuzu"], "Fabl, çoğunlukla hayvan karakterler üzerinden bir ders veren kısa anlatıdır.", "fable"],
+  ["tfe090", "language_literature", "Kişi, yer veya varlıkların adını bildiren sözcük türü hangisidir?", ["İsim", "Fiil", "Ünlem", "Bağlaç"], "Bir varlığın, kişinin veya yerin adını bildiren sözcüklere isim denir.", "tdkDictionary"],
+
+  ["tfe091", "turkiye", "Türkiye'nin İstiklâl Marşı'nı kim yazmıştır?", ["Mehmet Âkif Ersoy", "Yunus Emre", "Karacaoğlan", "Evliya Çelebi"], "İstiklâl Marşı'nın şairi Mehmet Âkif Ersoy'dur.", "istiklal"],
+  ["tfe092", "turkiye", "Kırkpınar Yağlı Güreş Festivali hangi şehrimizde düzenlenir?", ["Edirne", "Antalya", "Samsun", "Kayseri"], "Kırkpınar Yağlı Güreş Festivali Edirne'de düzenlenir.", "oilWrestling"],
+  ["tfe093", "turkiye", "Türk çayı geleneksel olarak çoğunlukla nasıl biçimli bardakta sunulur?", ["Armut biçimli küçük cam bardakta", "Kulplu büyük kupada", "Kâğıt bardakta", "Kadehte"], "UNESCO, Türkiye'de çayın çoğunlukla armut biçimli bardaklarda sunulduğunu belirtir.", "tea"],
+  ["tfe094", "turkiye", "Baklavasıyla tanınan ve UNESCO listesinde yer alan Türkiye şehri hangisidir?", ["Gaziantep", "Edirne", "Sinop", "Kars"], "Gaziantep baklavası, UNESCO'nun Somut Olmayan Kültürel Miras listesinde yer alır.", "baklava"],
+  ["tfe095", "turkiye", "Kırkpınar Yağlı Güreş Festivali hangi geleneksel sporla ilgilidir?", ["Yağlı güreş", "Kürek", "Kayak", "At yarışı"], "Kırkpınar, Türkiye'de düzenlenen geleneksel yağlı güreş festivalidir.", "oilWrestling"],
+
+  ["tfe096", "general_knowledge", "Bir dakikada kaç saniye vardır?", ["60", "30", "100", "24"], "Bir dakika 60 saniyeden oluşur.", "time"],
+  ["tfe097", "general_knowledge", "Bir yılda kaç ay vardır?", ["12", "10", "11", "13"], "Bir takvim yılında 12 ay bulunur.", "calendar"],
+  ["tfe098", "general_knowledge", "Üçgenin kaç kenarı vardır?", ["3", "2", "4", "5"], "Üçgen, üç kenarı olan geometrik şekildir.", "geometry"],
+  ["tfe099", "general_knowledge", "Standart bir bisiklette kaç tekerlek bulunur?", ["2", "1", "3", "4"], "Standart bisiklet iki tekerlek üzerinde ilerler.", "bicycle"],
+  ["tfe100", "general_knowledge", "Saati gösteren ve çoğunlukla akrep ile yelkovanı bulunan araç hangisidir?", ["Saat", "Cetvel", "Termometre", "Pusula"], "Saat, zamanı gösteren ölçüm aracıdır.", "clock"],
+];
+
+export const turkishEasyFoundationsTwo: readonly Question[] = rows.map(([id, category, question, options, explanation, source]) => ({
+  id,
+  difficulty: "easy" satisfies Difficulty,
+  category,
+  question,
+  choices: options.map((text, index) => ({ id: `${id}-${index}`, text })) as unknown as Question["choices"],
+  correctAnswer: `${id}-0`,
+  explanation,
+  sourceUrl: sources[source],
+  reviewedAt: "2026-11-09",
+}));

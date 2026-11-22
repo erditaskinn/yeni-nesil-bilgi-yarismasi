@@ -1,4 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
+
+// Legacy navigation tests deliberately start fresh; reload recovery is tested in rounds.spec.
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => sessionStorage.removeItem("ynby:active-round:v1")); });
 import AxeBuilder from "@axe-core/playwright";
 import { questions } from "../../src/data/questions";
 import { matchesCategory } from "../../src/lib/categories";
@@ -16,15 +19,41 @@ async function accessible(page: Page) {
     .analyze();
   expect(result.violations).toEqual([]);
 }
+
+test("seviye ve tur kartları farklı ekranlarda okunabilir bir listede kalır", async ({ page }, testInfo) => {
+  for (const width of [320, 900]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Bilgini Test Et" }).click();
+    await page.getByTestId("category-mixed").click();
+
+    for (const screen of ["level-selection-page", "round-selection-page"]) {
+      const cards = page.locator(`.${screen} .level-card`);
+      await expect(cards.first()).toBeVisible();
+      const layout = await cards.evaluateAll((nodes) => nodes.map((node) => {
+        const card = node.getBoundingClientRect();
+        const copy = node.querySelector(".selection-copy")!.getBoundingClientRect();
+        const bottom = node.querySelector(".level-bottom")!.getBoundingClientRect();
+        return { left: card.left, right: card.right, top: card.top, bottom: card.bottom, copyWidth: copy.width, copyRight: copy.right, footerRight: bottom.right };
+      }));
+      expect(layout.length).toBeGreaterThan(2);
+      expect(layout.every((card, index) => card.copyWidth >= 150 && card.copyRight <= card.right + 1 && card.footerRight <= card.right + 1 && (index === 0 || card.top >= layout[index - 1]!.bottom + 4))).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`${screen}-${width}.png`), fullPage: true });
+      if (screen === "level-selection-page") await page.getByTestId("level-easy").click();
+    }
+  }
+});
+
 async function start(page: Page, difficulty = "easy") {
   await page.goto("/");
-  await page.getByRole("button", { name: "Hemen Oyna" }).click();
+  await page.getByRole("button", { name: "Bilgini Test Et" }).click();
   await page.getByTestId("category-mixed").click();
   await page.getByTestId(`level-${difficulty}`).click();
+  await page.getByTestId("round-standard").click(); await page.getByTestId("pace-competition").click(); await page.getByTestId("start-round").click();
   await expect(page.getByTestId("question-number")).toHaveText("01");
 }
 
-test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", async ({
+test("ana sayfa, seviyeler, tam yarışma, sonuç, paylaşım ve yeni tur", async ({
   page,
 }, testInfo) => {
   test.setTimeout(90_000);
@@ -56,7 +85,7 @@ test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", asy
     path: testInfo.outputPath("home.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Hemen Oyna" }).click();
+  await page.getByRole("button", { name: "Bilgini Test Et" }).click();
   await accessible(page);
   await noOverflow(page);
   await expect(page.getByTestId("category-mixed")).toBeVisible();
@@ -72,6 +101,7 @@ test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", asy
     fullPage: true,
   });
   await page.getByTestId("level-easy").click();
+  await page.getByTestId("round-standard").click(); await page.getByTestId("pace-competition").click(); await page.getByTestId("start-round").click();
   const seen = new Set<string>();
   for (let i = 0; i < 10; i++) {
     const text = await page.locator("main h1").innerText();
@@ -151,7 +181,7 @@ test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", asy
   await page.getByRole("button", { name: "Sonucumu Paylaş" }).click();
   await expect(page.getByText("Sonucun panoya kopyalandı!")).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem("shared"))).toContain(
-    "10 sorudan 7",
+    "10 soruda 7 doğru",
   );
   expect(
     await page.evaluate(
@@ -159,15 +189,15 @@ test("ana sayfa, seviyeler, tam oyun, sonuç, paylaşım ve yeniden oynama", asy
         JSON.parse(localStorage.getItem("ynby:high-scores:v1") ?? "{}").easy,
     ),
   ).toBe(1400);
-  await page.getByRole("button", { name: "Tekrar Oyna" }).click();
+  await page.getByRole("button", { name: "Yeni Tura Başla" }).click();
   await expect(page.getByTestId("question-number")).toHaveText("01");
   await expect(page.getByTestId("live-score")).toHaveText("0 puan");
   const nextHistory = await page.evaluate(() => JSON.parse(localStorage.getItem("ynby:seen-questions:v1") ?? "[]") as string[]);
   expect(nextHistory.slice(-10).every((id) => !seen.has(id))).toBe(true);
   await expect(page.locator(".choice:disabled")).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("button", { name: "Hemen Oyna" })).toBeVisible();
-  await page.getByRole("button", { name: "Hemen Oyna" }).click();
+  await expect(page.getByRole("button", { name: "Bilgini Test Et" })).toBeVisible();
+  await page.getByRole("button", { name: "Bilgini Test Et" }).click();
   await page.getByTestId("category-mixed").click();
   await expect(page.getByTestId("level-easy")).toContainText("1.400");
   expect(errors).toEqual([]);
@@ -199,16 +229,17 @@ test("süresi dolan soru incelenir; çalışma turunda zaman aşımı ve puan yo
 
 test("kategori seçimi zorluktan önce gelir ve sorular seçilen konuda kalır", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Hemen Oyna" }).click();
-  await page.getByTestId("category-science").click();
+  await page.getByRole("button", { name: "Bilgini Test Et" }).click();
+  await page.getByTestId("category-science_nature").click();
   await expect(page.getByText("BİLİM VE DOĞA", { exact: true })).toBeVisible();
-  await page.getByTestId("level-expert").click();
+  await page.getByTestId("level-hard").click();
+  await page.getByTestId("round-standard").click(); await page.getByTestId("pace-competition").click(); await page.getByTestId("start-round").click();
   const firstText = await page.locator("main h1").innerText();
   const first = questions.find((q) => q.question === firstText);
   expect(first).toBeDefined();
-  expect(first?.difficulty).toBe("expert");
-  expect(matchesCategory(first!.category, "science")).toBe(true);
-  await expect(page.locator(".quiz-category")).toHaveText("Bilim ve Doğa");
+  expect(["hard", "expert"]).toContain(first?.difficulty);
+  expect(matchesCategory(first!.category, "science_nature")).toBe(true);
+  await expect(page.locator(".quiz-category")).toContainText("Bilim ve Doğa · Standart Tur");
   await noOverflow(page);
   await accessible(page);
   await page.getByRole("button", { name: "Yarışmadan çık", exact: true }).click();
@@ -216,6 +247,7 @@ test("kategori seçimi zorluktan önce gelir ve sorular seçilen konuda kalır",
   await page.getByRole("button", { name: "Kategoriler" }).click();
   await page.getByTestId("category-history").click();
   await page.getByTestId("level-easy").click();
+  await page.getByTestId("round-standard").click(); await page.getByTestId("pace-competition").click(); await page.getByTestId("start-round").click();
   const secondText = await page.locator("main h1").innerText();
   const second = questions.find((q) => q.question === secondText);
   expect(second).toBeDefined();
@@ -227,7 +259,7 @@ test("zaman aşımı, çıkış onayı, klavye ve seviye değiştirme", async ({
   page,
 }) => {
   await page.clock.install();
-  await start(page, "expert");
+  await start(page, "hard");
   await page.clock.fastForward(21000);
   await expect(
     page.getByText("Süre doldu. Yeni bir bilgiye ne dersin?"),
@@ -252,12 +284,18 @@ test("zaman aşımı, çıkış onayı, klavye ve seviye değiştirme", async ({
     .click();
   await page.getByTestId("level-hard").focus();
   await page.keyboard.press("Enter");
+  await page.getByTestId("round-standard").focus();
+  await page.keyboard.press("Enter");
+  await page.getByTestId("pace-competition").focus();
+  await page.keyboard.press("Enter");
+  await page.getByTestId("start-round").focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByTestId("question-number")).toHaveText("01");
   const text = await page.locator("main h1").innerText();
-  expect(questions.find((q) => q.question === text)?.difficulty).toBe("hard");
+  expect(["hard", "expert"]).toContain(questions.find((q) => q.question === text)?.difficulty);
 });
 
-test("depolama ve paylaşım engelliyken oyun tamamlanır, manuel metin sunulur", async ({
+test("depolama ve paylaşım engelliyken yarışma tamamlanır, manuel metin sunulur", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -289,7 +327,7 @@ test("depolama ve paylaşım engelliyken oyun tamamlanır, manuel metin sunulur"
   await page.getByRole("button", { name: "Sonucumu Paylaş" }).click();
   await expect(
     page.getByRole("textbox", { name: "Paylaşım metnin" }),
-  ).toHaveValue(/Orta seviyede/);
+  ).toHaveValue(/Orta · Standart Tur · Yarışma Modu/);
   await page.getByRole("button", { name: "Seviye Değiştir" }).click();
   await expect(page.getByTestId("level-medium")).toBeEnabled();
 });
@@ -314,14 +352,14 @@ test("404 ve SEO çıktıları", async ({ page, request }) => {
   expect(image.headers()["content-type"]).toContain("image/png");
 });
 
-test("seviye rehberleri indekslenebilir ve oyuna doğrudan başlatır", async ({ page, request }) => {
+test("seviye rehberleri indekslenebilir ve tur seçimini açar", async ({ page, request }) => {
   const levels = [
     ["easy", "/kolay-bilgi-yarismasi", "Kolay Bilgi Yarışması"],
     ["medium", "/orta-bilgi-yarismasi", "Orta Bilgi Yarışması"],
     ["hard", "/zor-bilgi-yarismasi", "Zor Bilgi Yarışması"],
-    ["expert", "/cok-zor-bilgi-yarismasi", "Çok Zor Bilgi Yarışması"],
   ] as const;
   const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).not.toContain("https://yeninesilbilgiyarismasi.com/cok-zor-bilgi-yarismasi");
   for (const [level, path, title] of levels) {
     const response = await request.get(path);
     expect(response.status()).toBe(200);
@@ -335,9 +373,15 @@ test("seviye rehberleri indekslenebilir ve oyuna doğrudan başlatır", async ({
     await noOverflow(page);
     await page.locator(".guide-examples summary").first().click();
     await expect(page.locator(".guide-answer").first()).toBeVisible();
-    await page.getByRole("link", { name: "Bu Seviyede Oyna" }).click();
+    await page.getByRole("link", { name: "Bu Seviyede Yarış" }).click();
+    await page.getByTestId("round-standard").click(); await page.getByTestId("pace-competition").click(); await page.getByTestId("start-round").click();
     await expect(page.getByTestId("question-number")).toHaveText("01");
     const questionText = await page.locator("main h1").innerText();
-    expect(questions.find(q => q.question === questionText)?.difficulty).toBe(level);
+    const questionDifficulty = questions.find(q => q.question === questionText)?.difficulty;
+    expect(level === "hard" ? ["hard", "expert"] : [level]).toContain(questionDifficulty);
   }
+  await page.goto("/cok-zor-bilgi-yarismasi");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://yeninesilbilgiyarismasi.com/zor-bilgi-yarismasi");
+  await expect(page.getByRole("heading", { name: "Çok Zor soruları artık Zor seviyesinde" })).toBeVisible();
 });

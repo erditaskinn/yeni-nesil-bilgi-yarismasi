@@ -8,6 +8,12 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     "out/**",
+    "mobile-out/**",
+    "membership-test-out/**",
+    "android/**",
+    "artifacts/**",
+    ".android-tools/**",
+    "supabase/functions/delete-account/index.ts",
     "next-env.d.ts",
     "test-results/**",
     "playwright-report/**",

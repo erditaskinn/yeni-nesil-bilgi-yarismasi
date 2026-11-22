@@ -1,5 +1,7 @@
+import { ROUND_CONFIG } from "./rounds";
+
 export const GAME_CONFIG = {
-  questionCount: 10,
+  questionCount: ROUND_CONFIG.standard.count,
   secondsPerQuestion: 20,
   basePoints: 100,
   pointsPerSecond: 5,
@@ -8,6 +10,7 @@ export const GAME_CONFIG = {
 export const SITE_URL = "https://yeninesilbilgiyarismasi.com";
 export const DIFFICULTIES = ["easy", "medium", "hard", "expert"] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
+export const TURKISH_DIFFICULTIES = ["easy", "medium", "hard"] as const satisfies readonly Difficulty[];
 
 export const LEVELS: Record<
   Difficulty,

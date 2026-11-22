@@ -1,3 +1,8 @@
+"use client";
+import Image from "next/image";
+import { useI18n } from "./locale-provider";
+import { levelInfo, categoryInfo } from "../lib/locale";
+
 import {
   ArrowRight,
   Check,
@@ -9,14 +14,15 @@ import {
   Trophy,
   CalendarDays,
   ChartNoAxesCombined,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
-import { DIFFICULTIES, LEVELS } from "../lib/config";
+import { TURKISH_DIFFICULTIES } from "../lib/config";
 import { levelPath, levelTitle } from "../lib/level-pages";
 import { TOPIC_CATEGORIES, categoryPath, categoryTitle } from "../lib/category-pages";
-import { CATEGORIES } from "../lib/categories";
 
-export function Home({ onPlay, onDaily, onStatistics, loadingDaily }: { onPlay: () => void; onDaily: () => void; onStatistics: () => void; loadingDaily: boolean }) {
+export function Home({ onPlay, onDaily, onStatistics, onMultiplayer, loadingDaily, compact = false }: { onPlay: () => void; onDaily: () => void; onStatistics: () => void; onMultiplayer?: () => void; loadingDaily: boolean; compact?: boolean }) {
+  const { locale, t } = useI18n();
   return (
     <>
       <section className="hero" aria-labelledby="home-title">
@@ -36,39 +42,33 @@ export function Home({ onPlay, onDaily, onStatistics, loadingDaily }: { onPlay: 
         </div>
         <div className="hero-content">
           <span className="eyebrow">
-            <span className="small-line" /> MERAKIN OYUNA DÖNÜŞSÜN
-          </span>
-          <h1 id="home-title" tabIndex={-1}>
-            Yeni Nesil
-            <br />
-            <span>Bilgi Yarışması</span>
+            <span className="small-line" />{t("heroEyebrow")}</span>
+          <h1 id="home-title" tabIndex={-1}>{t("brandTop")}<br />
+            <span>{t("brandBottom")}</span>
           </h1>
-          <p className="slogan">Bilgini göster, eğlenerek öğren!</p>
-          <p className="hero-description">
-            İstediğin an başla, kategorini ve seviyeni seç, bilgini test et
-            <br className="desktop-break" /> ve yeni şeyler öğren.
-          </p>
-          <button className="button primary hero-cta" onClick={onPlay}>
-            Hemen Oyna <ArrowRight size={20} />
+          <p className="slogan">{t("slogan")}</p>
+          {!compact && <p className="hero-description">{t("heroDescription")}</p>}
+          <button className="button primary hero-cta" onClick={onPlay}>{t("play")}<ArrowRight size={20} />
           </button>
-          <div className="hero-notes">
+          {!compact && <div className="hero-notes">
             <span>
-              <Check size={15} /> Üyelik gerektirmez
-            </span>
+              <Check size={15} />{t("noAccount")}</span>
             <span>
-              <Check size={15} /> Tek başına, istediğin an
-            </span>
-          </div>
+              <Check size={15} />{t("solo")}</span>
+          </div>}
         </div>
-        <div className="hero-bottom">
-          <span>10 SORU</span>
+        <div className="hero-visual"><Image src="/native/quiz-mascot.png" alt="" width={420} height={420} priority unoptimized /></div>
+        {!compact && <div className="hero-bottom">
+          <span>{t("tenQuestions")}</span>
           <i />
-          <span>4 SEVİYE</span>
+          <span>{t("threeLevels")}</span>
           <i />
-          <span>YEPYENİ BİLGİLER</span>
-        </div>
+          <span>{t("newFacts")}</span>
+        </div>}
       </section>
-      <section className="daily-band"><div className="wrap daily-content"><CalendarDays size={30} /><div><span className="eyebrow">BUGÜNÜN KEŞFİ</span><h2>Günlük 10 Soru</h2><p>Her gün yeni bir tur. Aynı gün, herkes için aynı sorular.</p></div><button className="button primary" onClick={onDaily} disabled={loadingDaily}>{loadingDaily ? "Hazırlanıyor" : "Günlük Turu Oyna"}<ArrowRight size={18} /></button></div></section>
+      <section className={`daily-band${compact ? " compact" : ""}`}><div className="wrap daily-content"><CalendarDays size={30} /><div><span className="eyebrow">{t("dailyEyebrow")}</span><h2>{t("daily")}</h2>{!compact && <p>{t("dailyDescription")}</p>}</div><button className="button primary" onClick={onDaily} disabled={loadingDaily}>{loadingDaily ? t("preparing") : t("dailyPlay")}<ArrowRight size={18} /></button></div></section>
+      {onMultiplayer && <section className="multiplayer-band"><div className="wrap multiplayer-band-inner"><Users size={28} aria-hidden="true" /><div><span className="eyebrow">UYGULAMAYA ÖZEL</span><h2>Arkadaşlarla Yarış</h2></div><button className="button primary" onClick={onMultiplayer}>Oda Kur veya Katıl <ArrowRight size={18} /></button></div></section>}
+      {!compact && <>
       <section
         className="how-section wrap"
         id="nasil-oynanir"
@@ -76,10 +76,10 @@ export function Home({ onPlay, onDaily, onStatistics, loadingDaily }: { onPlay: 
       >
         <div className="section-heading">
           <div>
-            <span className="eyebrow">KÜÇÜK BİR MOLA, BÜYÜK BİR KEŞİF</span>
-            <h2 id="how-title">Üç adımda oyundasın.</h2>
+            <span className="eyebrow">{t("howEyebrow")}</span>
+            <h2 id="how-title">{t("howTitle")}</h2>
           </div>
-          <span className="section-note">Rakibin, dünkü sen.</span>
+          <span className="section-note">{t("rival")}</span>
         </div>
         <ol className="steps">
           <li>
@@ -87,8 +87,8 @@ export function Home({ onPlay, onDaily, onStatistics, loadingDaily }: { onPlay: 
               <Compass />
             </span>
             <span className="step-number">01</span>
-            <h3>Kategorini ve seviyeni seç</h3>
-            <p>Karışık sorularla başla veya sevdiğin konuya yönel.</p>
+            <h3>{t("step1")}</h3>
+            <p>{t("step1Text")}</p>
             <ChevronRight className="step-arrow" />
           </li>
           <li>
@@ -96,8 +96,8 @@ export function Home({ onPlay, onDaily, onStatistics, loadingDaily }: { onPlay: 
               <ListChecks />
             </span>
             <span className="step-number">02</span>
-            <h3>10 soruyu cevapla</h3>
-            <p>Her soruda bilgini sına, cevabın ardındaki bilgiyi keşfet.</p>
+            <h3>{t("step2")}</h3>
+            <p>{t("step2Text")}</p>
             <ChevronRight className="step-arrow" />
           </li>
           <li>
@@ -105,8 +105,8 @@ export function Home({ onPlay, onDaily, onStatistics, loadingDaily }: { onPlay: 
               <Trophy />
             </span>
             <span className="step-number">03</span>
-            <h3>Sonucunu gör ve paylaş</h3>
-            <p>Kendi rekorunu geliştir, arkadaşlarını da oyuna davet et.</p>
+            <h3>{t("step3")}</h3>
+            <p>{t("step3Text")}</p>
           </li>
         </ol>
       </section>
@@ -114,24 +114,21 @@ export function Home({ onPlay, onDaily, onStatistics, loadingDaily }: { onPlay: 
         <div className="wrap discovery-content">
           <Lightbulb />
           <div>
-            <h2>Doğru cevap da bir kazanç, yeni bir bilgi de.</h2>
-            <p>
-              Bilimden sanata, tarihten coğrafyaya. Her sorunun sonunda kısa bir
-              keşif seni bekliyor.
-            </p>
+            <h2>{t("discoveryTitle")}</h2>
+            <p>{t("discoveryText")}</p>
           </div>
-          <button className="text-button" onClick={onPlay}>
-            Hadi başlayalım <ArrowRight size={18} />
+          <button className="text-button" onClick={onPlay}>{t("letsGo")}<ArrowRight size={18} />
           </button>
         </div>
       </section>
       <section className="wrap level-links-section" aria-labelledby="level-links-title">
-        <span className="eyebrow">KENDİ YOLUNU SEÇ</span>
-        <h2 id="level-links-title">Hangi seviyeden başlayacaksın?</h2>
-        <p>Her seviyede bilim, tarih, coğrafya, sanat ve farklı genel kültür konularından sorular bulunur. Örnek sorulara göz atıp sana uygun turu seçebilirsin.</p>
-        <div className="level-links">{DIFFICULTIES.map(level => <Link key={level} href={levelPath(level)}><span><strong>{levelTitle(level)}</strong><small>{LEVELS[level].description}</small></span><ArrowRight size={19} /></Link>)}</div>
+        <span className="eyebrow">{t("levelLinksEyebrow")}</span>
+        <h2 id="level-links-title">{t("levelLinksTitle")}</h2>
+        <p>{t("levelLinksText")}</p>
+        <div className="level-links">{TURKISH_DIFFICULTIES.map(level => <Link key={level} href={levelPath(level, locale)}><span><strong>{levelTitle(level, locale)}</strong><small>{levelInfo(locale, level).description}</small></span><ArrowRight size={19} /></Link>)}</div>
       </section>
-      <section className="wrap level-links-section" aria-labelledby="category-links-title"><span className="eyebrow">KONULARI KEŞFET</span><h2 id="category-links-title">Merakın hangi yönde?</h2><div className="level-links">{TOPIC_CATEGORIES.map(category => <Link key={category} href={categoryPath(category)}><span><strong>{categoryTitle(category)}</strong><small>{CATEGORIES[category].description}</small></span><ArrowRight size={19} /></Link>)}</div><button className="text-button statistics-link" onClick={onStatistics}><ChartNoAxesCombined size={18} /> İstatistiklerim</button></section>
+      <section className="wrap level-links-section" aria-labelledby="category-links-title"><span className="eyebrow">{t("categoryLinksEyebrow")}</span><h2 id="category-links-title">{t("categoryLinksTitle")}</h2><div className="level-links">{TOPIC_CATEGORIES.map(category => <Link key={category} href={categoryPath(category, locale)}><span><strong>{categoryTitle(category, locale)}</strong><small>{categoryInfo(locale, category).description}</small></span><ArrowRight size={19} /></Link>)}</div><button className="text-button statistics-link" onClick={onStatistics}><ChartNoAxesCombined size={18} />{t("statistics")}</button></section>
+      </>}
     </>
   );
 }

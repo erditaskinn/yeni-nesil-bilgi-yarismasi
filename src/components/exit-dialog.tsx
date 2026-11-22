@@ -1,13 +1,21 @@
+"use client";
+import { useI18n } from "./locale-provider";
+
 import { useEffect, useRef } from "react";
 import { LogOut } from "lucide-react";
 
 export function ExitDialog({
   onCancel,
   onExit,
+  relaxed = false,
+  adaptive = false,
 }: {
   onCancel: () => void;
   onExit: () => void;
+  relaxed?: boolean;
+  adaptive?: boolean;
 }) {
+  const { t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current;
@@ -28,18 +36,11 @@ export function ExitDialog({
       <span className="dialog-icon">
         <LogOut />
       </span>
-      <h2 id="exit-title">Bu turdan ayrılıyor musun?</h2>
-      <p id="exit-description">
-        Bu oyundaki ilerlemen kaydedilmeyecek. Sorunun süresi işlemeye devam
-        ediyor.
-      </p>
+      <h2 id="exit-title">{adaptive ? "Turu bitirmek istiyor musun?" : t("exitHeading")}</h2>
+      <p id="exit-description">{adaptive ? "Şu ana kadarki cevapların sonuçlarda gösterilecek. Devam etmek istersen turuna geri dönebilirsin." : t(relaxed ? "exitDescriptionRelaxed" : "exitDescription")}</p>
       <div className="dialog-actions">
-        <button autoFocus className="button primary" onClick={onCancel}>
-          Oyuna Dön
-        </button>
-        <button className="button secondary" onClick={onExit}>
-          Yarışmadan Çık
-        </button>
+        <button autoFocus className="button primary" onClick={onCancel}>{adaptive ? "Tura devam et" : t("resume")}</button>
+        <button className="button secondary" onClick={onExit}>{adaptive ? "Sonuçları gör" : t("exitConfirm")}</button>
       </div>
     </dialog>
   );

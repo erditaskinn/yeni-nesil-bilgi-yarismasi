@@ -1,7 +1,56 @@
+import { levelGeneral } from "./questions-tr-level-general";
+import { levelGeography } from "./questions-tr-level-geography";
+import { levelCinema } from "./questions-tr-level-cinema";
+import { levelArt } from "./questions-tr-level-art";
+import { levelLiterature } from "./questions-tr-level-literature";
+import { levelSports } from "./questions-tr-level-sports";
+import { levelHistory } from "./questions-tr-level-history";
+import { levelScience } from "./questions-tr-level-science";
+import { levelTurkiye } from "./questions-tr-level-turkiye";
+import { levelTechnology } from "./questions-tr-level-technology";
+import { levelSpace } from "./questions-tr-level-space";
 import type { Difficulty } from "../lib/config";
+import { foundationQuestions } from "./questions-foundations";
+import { reviewDifficulties } from "./difficulty-review";
+import { reviewTurkishDifficulties } from "./turkish-difficulty-review";
 import type { Question } from "../lib/types";
 import { expandedQuestions } from "./questions-expanded";
 import { QUESTION_IMAGES } from "./question-images";
+import { newTopicQuestions } from "./questions-new-topics";
+import { turkishBatchOne, turkishBatchTwo } from "./questions-tr-batch-one";
+import { turkishSourceExpansion } from "./questions-tr-source-expansion";
+import { turkishMilestoneOne } from "./questions-tr-milestone-one";
+import { turkishMilestoneTwo } from "./questions-tr-milestone-two";
+import { turkishMilestoneThree } from "./questions-tr-milestone-three";
+import { turkishFiftyOne } from "./questions-tr-batch-50-one";
+import { turkishFiftyTwo } from "./questions-tr-batch-50-two";
+import { turkishFiftyThree } from "./questions-tr-batch-50-three";
+import { turkishFiftyFour } from "./questions-tr-batch-50-four";
+import { turkishFiftyFive } from "./questions-tr-batch-50-five";
+import { turkishFinalFortyTwo } from "./questions-tr-batch-42-final";
+import { turkishBalanceOne } from "./questions-tr-balance-one";
+import { turkishBalanceTwo } from "./questions-tr-balance-two";
+import { turkishBalanceThree } from "./questions-tr-balance-three";
+import { turkishBalanceFour } from "./questions-tr-balance-four";
+import { turkishBalanceFive } from "./questions-tr-balance-five";
+import { turkishBalanceSix } from "./questions-tr-balance-six";
+import { turkishBalanceSeven } from "./questions-tr-balance-seven";
+import { turkishBalanceEight } from "./questions-tr-balance-eight";
+import { turkishBalanceNine } from "./questions-tr-balance-nine";
+import { turkishBalanceTen } from "./questions-tr-balance-ten";
+import { turkishBalanceEleven } from "./questions-tr-balance-eleven";
+import { turkishBalanceTwelve } from "./questions-tr-balance-twelve";
+import { turkishBalanceThirteen } from "./questions-tr-balance-thirteen";
+import { turkishBalanceFourteen } from "./questions-tr-balance-fourteen";
+import { turkishBalanceFifteen } from "./questions-tr-balance-fifteen";
+import { turkishBalanceSixteen } from "./questions-tr-balance-sixteen";
+import { turkishBalanceSeventeen } from "./questions-tr-balance-seventeen";
+import { turkishBalanceEighteen } from "./questions-tr-balance-eighteen";
+import { turkishBalanceNineteen } from "./questions-tr-balance-nineteen";
+import { turkishEasyAdditions } from "./questions-tr-easy-additions";
+import { turkishEasyFoundations } from "./questions-tr-easy-foundations";
+import { turkishEasyFoundationsTwo } from "./questions-tr-easy-foundations-two";
+import { categoryForQuestion } from "../lib/categories";
 
 const sources = {
   planets: "https://science.nasa.gov/solar-system/planets/",
@@ -1167,4 +1216,9 @@ const questionPool: readonly Question[] = [
   ...expandedQuestions,
 ];
 
-export const questions: readonly Question[] = questionPool.map(question => QUESTION_IMAGES[question.id] ? { ...question, image: QUESTION_IMAGES[question.id] } : question);
+export const legacyQuestions: readonly Question[] = reviewDifficulties([...questionPool, ...foundationQuestions, ...newTopicQuestions]).map(question => ({
+  ...question,
+  category: categoryForQuestion(question.id, question.category),
+  ...(QUESTION_IMAGES[question.id] ? { image: QUESTION_IMAGES[question.id] } : {}),
+}));
+export const questions: readonly Question[] = reviewTurkishDifficulties([...levelGeneral, ...levelGeography, ...levelCinema, ...levelArt, ...levelLiterature, ...levelSports, ...levelHistory, ...levelScience, ...levelTurkiye, ...levelTechnology, ...levelSpace, ...legacyQuestions, ...turkishBatchOne, ...turkishBatchTwo, ...turkishSourceExpansion, ...turkishMilestoneOne, ...turkishMilestoneTwo, ...turkishMilestoneThree, ...turkishFiftyOne, ...turkishFiftyTwo, ...turkishFiftyThree, ...turkishFiftyFour, ...turkishFiftyFive, ...turkishFinalFortyTwo, ...turkishBalanceOne, ...turkishBalanceTwo, ...turkishBalanceThree, ...turkishBalanceFour, ...turkishBalanceFive, ...turkishBalanceSix, ...turkishBalanceSeven, ...turkishBalanceEight, ...turkishBalanceNine, ...turkishBalanceTen, ...turkishBalanceEleven, ...turkishBalanceTwelve, ...turkishBalanceThirteen, ...turkishBalanceFourteen, ...turkishBalanceFifteen, ...turkishBalanceSixteen, ...turkishBalanceSeventeen, ...turkishBalanceEighteen, ...turkishBalanceNineteen, ...turkishEasyAdditions, ...turkishEasyFoundations, ...turkishEasyFoundationsTwo]);

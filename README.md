@@ -1,6 +1,6 @@
 # Yeni Nesil Bilgi Yarışması
 
-Türkçe, tek kişilik, üyeliksiz bilgi yarışması. Dört zorluk seviyesinde kaynakları belirtilmiş toplam 500 soru içerir (seviye başına 125). Oyuncu önce Karışık Sorular veya dört konu kategorisinden birini, ardından zorluğu seçer. Her turda seçilen kategori ve seviyeden 10 benzersiz soru gelir. Cevap sonrasında doğru seçenek ve kısa açıklama gösterilir; sonuç paylaşılabilir ve kategori/seviye bazında en yüksek puan cihazda tutulur.
+Türkçe ve İngilizce, tek kişilik, üyeliği isteğe bağlı bilgi yarışması. Kaynakları belirtilmiş 620 soru içerir; çeviriler ayrı soru sayılmaz. Kullanıcı kategori, seviye ve tur türünü seçer: kısa, standart, uzun, sonsuz veya yanlışlarım. Günlük tur her zaman 10 sorudur. Her soruda 20 saniye, mevcut puanlama, açıklama ve kaynaklar korunur. Tam standart tur rekorları isteğe bağlı hesapla eşitlenir; diğer tur rekorları cihazda ayrı tutulur. Ayrıntılar ve doğrulama raporu: [Tur seçenekleri](docs/rounds-20260929.md).
 
 Next.js App Router 16, React 19, katı TypeScript ve Tailwind CSS 4 kullanır. Tamamen statik olarak dışa aktarılır; uygulama sunucusu, veritabanı, hesap veya gizli anahtar gerektirmez. Analiz, reklam ve çerez eklenmemiştir.
 
@@ -12,17 +12,19 @@ Bu yayın öncesi sunucu yedeği: `/var/www/yeninesilbilgiyarismasi-backup-befor
 
 Yayın öncesi sunucu yedeği: `/var/www/yeninesilbilgiyarismasi-backup-before-learning-20260927-231723` (sunucunun UTC zaman damgası). Yerel kaynak yedeği: `.backups/before-learning-2026-09-28.zip`. Dağıtım arşivi: `.backups/ynby-learning-20260928.tgz`; SHA-256: `11edc248d83cffb77ffe64d71d2fcd1022bbe83bc0c4f0a41e01c52c1160a223`. Önceki kategori yedeği ve 27 Eylül sunucu yedeği korunmuştur. Açık eski tarayıcı sekmelerinin paketlerini bulabilmesi için önceki `_next/` dosyaları yayında şimdilik tutulur; disk kullanımı gelecekte kontrollü temizlenmelidir.
 
-## Oyun akışı ve kategoriler
+**Son yayın:** 28 Eylül 2026'da 580 soruluk havuz ve 301 sorunun zorluk düzeltmesi Hetzner'e yayımlandı. Türkçe ve İngilizce canlı oyunlar masaüstü, telefon ve tablette altı tarayıcı senaryosuyla doğrulandı; sitemap'teki 18 URL, görseller, 404 ve canonical yönlendirmeler kontrol edildi. Yayın paketiyle sunucu dosyalarının checksum karşılaştırması fark vermedi. İnceleme ölçütleri, dağılım, paket ve sunucu yedeği `docs/question-difficulty.md` içindedir. Bu yayın kaynak kodunu GitHub'a otomatik göndermez.
 
-`Hemen Oyna` sonrası ilk seçenek olan **Karışık Sorular**, önceki gibi tüm konulardan soru seçer. Diğer seçenekler **Uzay**, **Bilim ve Doğa**, **Tarih ve Coğrafya** ve **Sanat ve Kültür** kategorileridir. Ardından Kolay, Orta, Zor veya Çok Zor seçilir. Her kategori/seviye birleşiminde en az 10 soru bulunur. Veri dosyasındaki ayrıntılı konu etiketlerinin bu dört gruba eşlenmesi `src/lib/categories.ts` içindedir. Yeni konu etiketi eklenirse bu eşlemeyi ve testleri de güncelleyin.
+## Yarışma Akışı Ve Kategoriler
 
-Karışık modun mevcut cihaz rekorları aynı `ynby:high-scores:v1` anahtarında kalır. Kategorili oyunların rekorları aynı anahtarın kategori uzantısında ayrı tutulur; hesap ve kişisel veri kullanılmaz. Seviye rehberlerinin doğrudan oynama bağlantıları karışık modda başlamaya devam eder.
+`Bilgini Test Et` sonrasında **Karışık Sorular**, **Uzay**, **Bilim ve Doğa**, **Tarih ve Coğrafya** veya **Sanat ve Kültür** seçilir. Ardından Kolay, Orta, Zor veya Çok Zor ve `Turunu seç` ekranı gelir. Merkezi `src/lib/rounds.ts` kısa (5), standart (10), uzun (20), sonsuz, yanlışlarım ve günlük (10) tur kurallarını tanımlar. Eksik havuzda kart, başlamadan önce gerçek soru sayısını bildirir. Kategori ve seviye dışına çıkılmaz, aynı turda soru tekrarlanmaz.
+
+Mevcut `ynby:high-scores:v1` ve kategori/hesap uzantıları standart tur için korunur. Diğer tur türleri ayrı anahtarlar kullanır; yanlışlarım ve günlük tur rekorlara eklenmez. Seviye rehberi bağlantıları seçilen kategori ve seviyeyi koruyarak tur seçimini açar. Hesap ve sunucu veri modeli değiştirilmez.
 
 ## Tekrar azaltma ve öğrenme
 
-Soru seçiminde cihazda kayıtlı geçmiş dikkate alınır. Önce görülmemiş sorular rastgele seçilir; yetmezse en eski görülen sorularla 10'a tamamlanır. Kategori ve zorluk filtreleri hiçbir zaman aşılmaz. Başarıyla başlatılan turun 10 soru kimliği `ynby:seen-questions:v1` anahtarına en eskiden en yeniye yazılır; liste en fazla 500 kimliktir. Yarım bırakılan turun seçilmiş soruları da geçmişe girer. Depolama reddedilir veya bozulursa oyun normal rastgele seçimle devam eder. Cihazlar arasında eşitleme ve kişisel veri kaydı yoktur.
+Soru seçiminde mevcut cihaz geçmişi dikkate alınır. Önce görülmemiş sorular, ardından en eski görülenler seçilir; kategori ve zorluk filtreleri aşılmaz. Sonlu turda seçilen, sonsuz turda yalnızca gösterilen soru kimlikleri mevcut 500 kimliklik geçmişe eklenir. Depolama engellenirse yarışma bellekte devam eder.
 
-Sonuçta yanlış ve süre dolan cevaplar **Yanlışlarımı İncele** ile doğru yanıt, oyuncunun cevabı, açıklama ve kaynaklarıyla açılır. **Yanlışlarımı Çalış** yalnızca bu turun kaçırılan sorularından oluşur: süre ve puan yoktur; her soruya bir kez cevap verilir, açıklamadan sonra ilerlenir. Tamamlandığında tekrar çalışılabilir veya değişmemiş yarışma sonucuna dönülebilir. Bu çalışma turu rekorlara yazılmaz ve sonucun paylaşım metnini değiştirmez. Tümü doğruysa yanlışları çalışma düğmeleri gösterilmez. Sayfa yenilenince çalışma ve son tur temizlenir; yerel rekorlar ve görülmüş soru geçmişi kalır.
+**Yanlışlarımı İncele** ve süresiz/puansız **Yanlışlarımı Çalış** korunur. Yeni **Yanlışlarım** turu, seçilen kategori ve seviyedeki önceki yanlışları getirir; doğru öğrenilen sorular geçmişten çıkarılır. İstatistik izni varsa son 100 turun soru kimlikleri cihazda tutulur; izin yoksa yalnızca oturum belleği kullanılır. Aktif turun geçici sekme kaydı yenilemede soruyu, sırayı, puanı ve gerçek bitiş zamanını geri getirir. Sonuç ekranındaki ayrı çalışma görünümü yenilemede sonuç özetine döner. Uygulama işlemi öldürülürse sekme kaydının Android tarafından korunması garanti edilmez.
 
 28 Eylül 2026 kalite kontrolünde tüm 500 kaydın yapısı ve kategori/seviye dağılımı otomatik denetlendi; metin benzerliği ve aynı kaynak/yanıt kümeleri incelendi. 21 soru yeniden yazıldı; değişen bilgiler NASA, RSC, FIDE, Nobel, UNESCO ve müzelerin kendi sayfalarından kontrol edildi. Bu tarama, tüm bilgi havuzunun bağımsız bir editör tarafından eksiksiz doğrulandığı anlamına gelmez. Zorluklar henüz kullanıcı başarı oranlarıyla kalibre edilmemiştir. Yeni geliştirme öncesi kaynak yedeği `.backups/before-learning-2026-09-28.zip` dosyasındadır.
 
@@ -113,7 +115,9 @@ Bu yardımcı yalnızca veri yazmayı kolaylaştırır: **yazım sırasında ilk
 
 İsteğe bağlı `image: { src, alt, width, height, credit, licenseUrl }` alanı görsel soruları destekler. Eşleştirmeler `src/data/question-images.ts` dosyasındadır. İlk set dört mevcut soruya bağlı üç WebP görselidir: dünya haritası, Ay yüzeyi ve Japon sanat baskısı. Kaynak/kullanım kayıtları `public/questions/LICENSES.md` içindedir. Alternatif metin doğru cevabı ifşa etmez; görsel yüklenemediğinde soru metinden cevaplanabilir. Kaynak ve atıf cevap geri bildiriminde görünür. Statik export nedeniyle çalışma zamanında Next.js görsel optimizasyon servisi kullanılmaz.
 
-Her seviyede 125 soru bulunur: Uzay, Bilim ve Doğa, Tarih ve Coğrafya havuzlarında 31'er; Sanat ve Kültür havuzunda 32 soru. Sayıyı değiştirecekseniz test beklentisini de bilinçli olarak güncelleyin. `npm test` toplam ve seviye başına sayıyı, soru kimliklerini ve metinlerini, seçenek benzersizliğini, tek doğru yanıtı ve kaynak/tarih alanlarını kontrol eder. Bu kontroller içerik editörünün bilgi doğrulamasının yerine geçmez.
+28 Eylül 2026 zorluk incelemesiyle havuz 580 soruya çıkarıldı. 301 mevcut sorunun seviyesi değiştirildi; her kategoriye 20 yeni soru eklendi. Güncel dağılım ve editoryal ölçütler [soru inceleme notlarında](docs/question-difficulty.md) bulunur. Seviyeleri eşit sayıya zorlamayın: her kategori/seviyede en az 10 soru gereklidir. `npm test` toplam sayıyı, yeterli havuzları, soru kimliklerini ve metinlerini, seçenek benzersizliğini, tek doğru yanıtı ve kaynak/tarih alanlarını kontrol eder. Otomatik testler içerik doğrulamasının ve gerçek oyuncu araştırmasının yerine geçmez.
+
+`src/data/difficulty-review.ts` mevcut kayıtların editoryal seviye düzeltmelerini içerir; soru kimliklerinin eski `e/m/h/x` ön ekleri güncel seviyeyi belirlemez. `src/data/questions-foundations.ts` 80 yeni soruyu, `src/data/en/foundations.ts` eşleşen İngilizce metinleri tutar. Yeni sorularda tarih/seviye/kategori/kaynak açıkça belirtilir. Kaynağı yeniden doğrulamadan yalnızca zorluk değiştirildiğinde `reviewedAt` değiştirilmez. Bir kimliği yeniden sınıflandırırken seviye rehberlerindeki örnekleri ve günlük tur sürümünü de denetleyin.
 
 Kaynaklar arasında [NASA](https://science.nasa.gov/solar-system/planets/), [UNESCO](https://whc.unesco.org/en/list/), [NOAA](https://oceanservice.noaa.gov/), [Royal Society of Chemistry](https://periodic-table.rsc.org/), [Nobel Prize](https://www.nobelprize.org/), Louvre, MoMA, Prado, Metropolitan Müzesi ve FIDE bulunur. Açıklamalar kısa Türkçe ifadelerle yazılmıştır; uzun kaynak metinleri kopyalanmamıştır. Eklenen görseller için ayrı lisans/kullanım kayıtları tutulur.
 
@@ -155,16 +159,67 @@ Domain bağlantısı Güzel Hosting panelinde yapılmıştır. Google Search Con
 ## Günlük tur, kategori keşfi ve istatistikler
 
 - **Günlük 10 Soru:** Ana sayfadaki ayrı düğmeyle ya da `/?mod=gunluk` adresiyle başlar. `src/lib/daily.ts` Türkiye saatine (Europe/Istanbul) göre tarihi ve tohumlu seçimi belirler. Aynı gün aynı soru ve seçenek sırası kullanılır; 2 kolay, 3 orta, 3 zor, 2 çok zor soru gelir. Tarih turun başında sabitlenir. Günlük tur normal kategori/seviye rekoruna yazılmaz; tekrar oynama aynı gün aynı seti getirir. Gelecek günün turu gece yarısından sonra yeni başlangıçta seçilir.
-- Günlük v1 havuzu mevcut `e01..e125`, `m01..m125`, `h01..h125`, `x01..x125` kimliklerine sabittir; sonraki havuz eklemeleri günlük seti değiştirmez. Bu kimlikleri silmek veya metinlerini değiştirmek günlük setin bütünlüğünü etkiler. Yeni bir günlük havuz sürümüne geçişi gün değişimine göre planlayın. Tarih cihaz saatine dayanır; sunucu saati doğrulaması veya günlük rekabet sıralaması yoktur.
-- **Kategori sayfaları:** `/uzay-bilgi-yarismasi`, `/bilim-ve-doga-bilgi-yarismasi`, `/tarih-ve-cografya-bilgi-yarismasi`, `/sanat-ve-kultur-bilgi-yarismasi`. Özgün açıklamalar, dört seviyeden kaynaklı örnekler ve ilgili kategoriye doğrudan oyun bağlantıları içerir. Metadata/canonical ve breadcrumb verileri `src/lib/category-pages.ts` / `src/components/category-guide.tsx` üzerinden hazırlanır. Sitemap ana sayfa, dört seviye ve dört kategori olmak üzere 9 URL içerir. Sorgu parametreleri ayrı sitemap sayfaları değildir.
+- Günlük v1 havuzu `e01..e125`, `m01..m125`, `h01..h125`, `x01..x125` kimliklerine sabittir. 28 Eylül 2026 ve öncesinde eski kimlik grupları kullanılarak önceki soru/seçenek sırası korunur; bu eski turların güncel zorluk dağılımı 2/3/3/2 olmayabilir. 29 Eylül 2026'dan itibaren v2, aynı kimlikler ve `r001..r080` üzerinden güncel seviyelerle 2/3/3/2 seçer. Daha sonraki eklemeler bu sabit kümelere kendiliğinden girmez. Kimlikleri silmek, metinleri veya seviyeleri değiştirmek günlük seti etkileyebilir; sürüm geçişlerini gün sınırına göre planlayın. Tarih cihaz saatine dayanır; sunucu saati doğrulaması veya günlük rekabet sıralaması yoktur.
+- **Kategori sayfaları:** `/uzay-bilgi-yarismasi`, `/bilim-ve-doga-bilgi-yarismasi`, `/tarih-ve-cografya-bilgi-yarismasi`, `/sanat-ve-kultur-bilgi-yarismasi`. Özgün açıklamalar, dört seviyeden kaynaklı örnekler ve ilgili kategoriye doğrudan oyun bağlantıları içerir. Metadata/canonical ve breadcrumb verileri `src/lib/category-pages.ts` / `src/components/category-guide.tsx` üzerinden hazırlanır. Sitemap iki dilde ana sayfa, dört seviye ve dört kategori olmak üzere 18 URL içerir. Sorgu parametreleri ayrı sitemap sayfaları değildir.
 - **Search Console:** Mevcut sitemap adresini yeniden okutun; dört yeni URL'yi URL Denetimi ile test edip dizine eklenmesini isteyin. Performans > Arama sonuçları ekranında sayfa filtresiyle her kategori URL'sini seçin; Sorgular bölümünde gösterim, tıklama, TO ve ortalama konumu 28 günlük dönemlerle karşılaştırın. Search Console hesabına erişim olmadan rapor takibi yapılamaz. İndekslenme veya sıralama garantisi yoktur; anahtar kelime doldurma, sahte puanlama ve kopya sayfalar eklenmez.
 - **İstatistiklerim:** Ana sayfadaki düğmeyle açılır, varsayılan kapalıdır. Kullanıcı açarsa yalnızca yeni tamamlanan son 100 tur `ynby:statistics:v1` ile cihazda saklanır. Tur kimliği çift kayıtları önler; günlük tur ayrı kategori olarak gösterilir. Yanlışları çalışma turları kaydedilmez. Kapatma kayıtları siler; açıkken Kayıtları Sil sıfırlar. Depolama engelli olduğunda kayıt yapılamadığı bildirilir, oyun etkilenmez. Hesap, çerez, dış analiz veya cihazlar arası eşitleme yoktur.
 - Yeni mantık testleri `tests/daily-statistics.test.ts`, uçtan uca testler `tests/e2e/new-modes.spec.ts` içindedir. Masaüstü, telefon ve tablet boyutlarında günlük turun tamamlanması, paylaşım, tekrar, istatistik onayı/silme, kategori bağlantıları, canonical, kaynaklar, görsel yüklenmesi, taşma ve otomatik erişilebilirlik denetlenir.
 
-## Diğer sınırlamalar
+## Türkçe ve İngilizce
 
-- Havuz seviye başına 125 sorudur; geçmişe göre tekrar ertelenir ancak havuz tükenince veya cihaz depolaması kapalıysa farklı turlarda tekrar gelebilir. Tek turda tekrar etmez.
+Türkçe ana sayfa `/`, İngilizce ana sayfa `/en` adresindedir. Üst alandaki Türkçe / English bağlantıları dil değiştirir; devam eden turda yanlışlıkla ilerlemenin kaybolmaması için gösterilmez. Dil otomatik yönlendirilmez ve çerez kullanılmaz. Kategori/seviye rehberlerinde dil değiştirme aynı rehberin karşılığına gider.
+
+- `src/lib/locale.ts`: Arayüz metinleri, seviye/kategori etiketleri, sayı ve yüzde biçimi.
+- `src/data/en/{easy,medium,hard,expert}.ts`: İlk 500 sorunun İngilizce metinleri. Dosya adları ilk sınıflandırmayı belirtir; güncel seviye Türkçe kayıt ve inceleme düzeltmesinden alınır. `src/data/en/foundations.ts` 80 ek sorunun çevirisidir.
+- `src/data/questions-en.ts`: Çeviriyi Türkçe kaynaktaki sabit soru/seçenek kimlikleri, kaynak, inceleme tarihi ve kategoriyle birleştirir. Eksik veya çift kimlik sessizce Türkçeye dönmez; doğrulama hatası verir. Görsellerin İngilizce alternatif metinleri burada tutulur.
+- `src/lib/question-repository.ts`: Dil bazlı veri kaynağı; İngilizce havuz oyun başladığında yüklenir. `category` teknik anahtarı ortak Türkçe veri değeri olarak kalır, ekranda `topicLabel` ile çevrilir.
+- `src/app/(tr)` ve `src/app/(en)/en`: Ayrı kök düzenleri sayesinde statik HTML baştan doğru `lang` değerini taşır. Türkçe URL'ler değişmez.
+- `src/app/global-not-found.tsx`: Ayrı kök düzenleri için Next.js'in `experimental.globalNotFound` mekanizmasıyla genel Türkçe 404 hazırlanır; HTML dili ve stil korunur. İngilizce Nginx 404 çıktısı `/en/404.html` dosyasıdır. Next.js yükseltmelerinde bu mekanizmanın statik export davranışını yeniden test edin.
+- `src/lib/english-pages.ts`, `site-metadata.ts`: İngilizce SEO içerikleri, kendine işaret eden canonical, karşılıklı `tr`, `en`, `x-default` hreflang bağlantıları. İngilizce paylaşım kapağı `/en/opengraph-image.png`.
+- `tests/english.test.ts`, `tests/e2e/english.spec.ts`: Çeviri kapsamı, seçenek kimlikleri, tüm kategori/seviye seçimleri, günlük set eşitliği, dil değiştirme, sonuç/paylaşım/çalışma ve erişilebilirlik kontrolleri.
+
+Yeni soru eklerken ilgili İngilizce dosyaya `[id, soru, [seçenek1, seçenek2, seçenek3, seçenek4], açıklama]` satırını ekleyin. Seçenekleri **Türkçe kaynak dizisiyle aynı sırada** yazın; motor oyun başlarken karıştırır. Özel isimler ve kimyasal semboller çeviride değişmeyebilir. Kaynak doğrulama tarihi çeviri tarihiyle değiştirilmez. İngilizce dil editörü incelemesi otomatik testlerin yerine geçmez.
+
+Günlük setin kimlikleri ve seçenek sırası iki dilde aynıdır. Rekorlar, görülen soru geçmişi ve isteğe bağlı istatistikler diller arasında ortaktır; aynı sorunun çevirisi yeni bir soru olarak sayılmaz. İngilizce paylaşım metni `/en` adresine götürür. İspanyolca bu sürüme dahil değildir.
+
+Yayınlamadan önce mevcut web kökünü **ve Nginx site yapılandırmasını** yedekleyin. `out/` aktarımının yanında `deploy/nginx-https.conf` içindeki `/en` konumlarını mevcut HTTPS sunucu bloğuna uygulayın: `/en.html` doğrudan sunulur, `/en/` canonical `/en` adresine yönlendirilir ve bulunamayan İngilizce yollar `/en/404.html` ile 404 döner. Diğer sitelerin yapılandırmasını değiştirmeyin; önce `nginx -t`, sonra reload. İngilizce sayfaları, 404 durum kodunu, sitemap ve oyun akışını canlıda ayrıca kontrol edin. Hosting/DNS değişikliği gerekmez.
+
+İngilizce geliştirme öncesi kaynak yedeği: `.backups/before-english-20260928.zip`.
+
+## Tema
+
+- Üst alandaki ay/güneş düğmesi Türkçe ve İngilizce sayfalarda açık ve karanlık görünümü değiştirir.
+- İlk açılışta işletim sisteminin renk tercihi izlenir. Elle seçilen tema `ynby-theme` anahtarıyla cihazda saklanır; depolama engelliyse mevcut sekmede çalışmaya devam eder.
+- Tema sayfa yüklenirken uygulanır; rehberler, oyun, sonuç, çalışma turu, istatistikler ve 404 aynı renk değişkenlerini kullanır. Açık sekmeler arasında tercih eşitlenir.
+- Renk çiftleri ve yüzeyler `src/app/globals.css` içinde tanımlıdır. Yeni bileşenlerde sabit açık arka plan yerine mevcut yüzey değişkenlerini kullanın.
+
+## İsteğe Bağlı Üyelik
+
+Supabase tabanlı kayıt/giriş, e-postayla kod doğrulama, şifre yenileme, takma ad ve hesaba ait kişisel rekor eşitlemesi hazırlanmıştır. Misafir oyun korunur. Türkçe hesap `/hesap`, İngilizce `/en/account`; gizlilik ve hesap silme sayfaları iki dilde mevcuttur. Hesap ana sayfadaki kullanıcı simgesiyle de açılır.
+
+Yeni ve ayrı bir Supabase projesi, SQL migration, sunucu tarafındaki hesap silme fonksiyonu ve özel SMTP kurulumu gerekir. `.env.local` içinde yalnızca `NEXT_PUBLIC_SUPABASE_URL` ve `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` kullanılır; yapılandırma yoksa oyun çalışır ve üyelik kapalı görünür. Gizli anahtarları site veya APK'ya koymayın.
+
+Kurulum ve yayın öncesi kontrol listesi: [Üyelik kurulumu](docs/membership.md). `npm run test:membership` ayrı `membership-test-out/` çıktısında taklit API ile masaüstü/mobil/tablet testlerini çalıştırır; bu test çıktısını yayınlamayın. SQL ve kimlik ayrımı testleri mevcut `npm test` komutuna dahildir. Web kaynak yedeği `.backups/before-membership-20260929-012809.zip` içindedir; Android native kaynakları bu aşamada değiştirilmemiştir. Önceki test APK'sı üyeliği içermez; kurulum tamamlanınca yeniden üretilmelidir.
+
+## Android Uygulaması
+
+Android projesi `android/`, yerel çalışma ayarları `capacitor.config.ts` içindedir. Mevcut web sitesi Hetzner'de değişmeden kalır; Android üretimi ayrı `mobile-out/` çıktısını kullanır. Sorular, iki dil ve görseller APK'ya dahil edilir. Kaynak bağlantıları, e-posta ve dış paylaşım uygulamaları internet veya ilgili uygulamayı gerektirebilir.
+
+- `npm run android:sync`: Android için statik içerik üretir ve yerel projeyi eşitler.
+- `npm run android:apk`: Java 21 ve Android SDK ile debug APK, Java birim testleri ve Android lint raporu üretir. Çıktı: `artifacts/ynby-android-test.apk`.
+- `npm run android:open`: Android Studio kuruluysa yerel projeyi açar.
+- Windows'ta Türkçe proje yolu için yalnızca native girdiler geçici ASCII klasöre kopyalanır; kaynak proje taşınmaz. Geçici derleme yolu komut çıktısında görünür.
+- Java için `JAVA_HOME`, SDK için `ANDROID_HOME` kullanılabilir. Bu bilgisayarda hazırlanan `.android-tools/jdk21` taşınabilir derleyicisi ve kullanıcı Android SDK'sı da desteklenir; araçlar Git'e eklenmez.
+
+Test APK'sı Play Store yayını değildir. Mağaza için gerçek telefon testi, geliştirici hesabı, kalıcı imzalama/anahtar yedeği, mağaza görselleri, gizlilik politikası ve gerekli test süreci ayrıca tamamlanmalıdır. Ayrıntılar: [Android hazırlığı](docs/android.md). Android öncesi kaynak yedeği `.backups/before-android-20260928.zip` içindedir.
+
+## Web Sürümünün Sınırlamaları
+
+- Havuz 620 sorudur; seviye/kategori sayıları eşit değildir. Geçmişe göre tekrar ertelenir ancak havuz tükenince veya cihaz depolaması kapalıysa farklı turlarda tekrar gelebilir. Tek turda tekrar etmez; aynı konu farklı sorularda tekrar ele alınabilir.
 - Zorluk etiketleri editoryal başlangıç sınıflandırmasıdır; kullanıcı araştırmasıyla kalibre edilmemiştir.
 - Cevaplar ve skor hesaplama istemcidedir; rekabetçi/ödüllü kullanım için hile koruması amaçlanmamıştır.
 - Otomatik erişilebilirlik testi, ekran okuyucuyla manuel kullanıcı testinin yerini tutmaz.
 - Native paylaşım penceresi ve Safari davranışları gerçek cihazda ayrıca denenmelidir.
+# 29 Eylül 2026 Üyelik Yayını
+
+Üyelik, Google giriş düğmesi ve güncel Türkçe/İngilizce gizlilik sayfaları canlı web sitesine aktarıldı. Google test modu korunuyor; marka doğrulaması ve hukuki değerlendirme henüz tamamlanmadı. Önceki site yedeği, paket özeti ve kontroller: [Yayın kaydı](docs/deployment-membership-20260929.md). Mevcut Android APK bu yayının parçası değildir.

@@ -1,3 +1,7 @@
+"use client";
+import { useI18n } from "./locale-provider";
+import { categoryInfo, numberLocale, levelInfo } from "../lib/locale";
+
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -6,13 +10,14 @@ import {
   Trophy,
 } from "lucide-react";
 import {
-  DIFFICULTIES,
-  GAME_CONFIG,
-  LEVELS,
+  TURKISH_DIFFICULTIES,
   type Difficulty,
 } from "../lib/config";
 import type { HighScores } from "../lib/storage";
-import { CATEGORIES, type GameCategory } from "../lib/categories";
+import type { GameCategory } from "../lib/categories";
+import { matchesCategory } from "../lib/categories";
+import { questions } from "../data/questions";
+import { englishQuestions } from "../data/questions-en";
 
 export function LevelSelection({
   onSelect,
@@ -29,25 +34,33 @@ export function LevelSelection({
   loading: Difficulty | null;
   error: string;
 }) {
+  const { locale, t } = useI18n();
+  const mergeExpertAtHard = true;
+  const visibleDifficulties = TURKISH_DIFFICULTIES;
+  const pool = locale === "tr" ? questions : englishQuestions;
+  const counts = Object.fromEntries(visibleDifficulties.map(level => [level, pool.filter(question => (question.difficulty === level || mergeExpertAtHard && level === "hard" && question.difficulty === "expert") && matchesCategory(question.category, category)).length])) as Partial<Record<Difficulty, number>>;
   return (
-    <section className="wrap level-page" aria-labelledby="level-title">
+    <section className="wrap level-page level-selection-page" aria-labelledby="level-title">
       <button className="text-button back-button" onClick={onBack}>
-        <ArrowLeft size={17} /> Kategoriler
-      </button>
+        <ArrowLeft size={17} />{t("categories")}</button>
       <div className="page-heading">
-        <span className="eyebrow">{CATEGORIES[category].label.toLocaleUpperCase("tr-TR")}</span>
-        <h1 id="level-title" tabIndex={-1}>
-          Bugün ne kadar iddialısın?
-        </h1>
-        <p>Bir seviye seç. İlk sorun seni bekliyor.</p>
+        <span className="eyebrow">{categoryInfo(locale, category).label.toLocaleUpperCase(numberLocale(locale))}</span>
+        <h1 id="level-title" tabIndex={-1}>{t("levelHeading")}</h1>
+        <p>{t("levelIntro")}</p>
       </div>
       <div className="level-grid">
-        {DIFFICULTIES.map((level, i) => (
-          <button
+        {visibleDifficulties.map((level, i) => {
+          const hasRecord = mergeExpertAtHard && level === "hard"
+            ? scores.hard !== undefined || scores.expert !== undefined
+            : scores[level] !== undefined;
+          const record = mergeExpertAtHard && level === "hard"
+            ? Math.max(scores.hard ?? 0, scores.expert ?? 0)
+            : scores[level];
+          return <button
             key={level}
             data-testid={`level-${level}`}
             className={`level-card level-${level}`}
-            disabled={loading !== null}
+            disabled={loading !== null || counts[level] === 0}
             onClick={() => onSelect(level)}
           >
             <div className="level-top">
@@ -62,35 +75,31 @@ export function LevelSelection({
               </span>
               <ArrowUpRight size={24} />
             </div>
-            <span className="level-tag">{LEVELS[level].tag}</span>
-            <h2>{LEVELS[level].label}</h2>
-            <p>{LEVELS[level].description}</p>
+            <div className="selection-copy">
+              <span className="level-tag">{levelInfo(locale, level).tag}</span>
+              <h2>{levelInfo(locale, level).label}</h2>
+              <p>{levelInfo(locale, level).description}</p>
+            </div>
             <div className="level-bottom">
-              {loading === level ? (
-                "Sorular hazırlanıyor…"
-              ) : scores[level] !== undefined ? (
+              {counts[level] === 0 ? t("noQuestionsAtLevel") : loading === level ? (
+                t("preparingQuestions")
+              ) : hasRecord ? (
                 <>
-                  <Trophy size={16} /> Rekorun:{" "}
-                  {scores[level]?.toLocaleString("tr-TR")} puan
-                </>
+                  <Trophy size={16} /> {t("record", { score: record!.toLocaleString(numberLocale(locale)) })}</>
               ) : (
                 <>
-                  <BarChart3 size={16} /> İlk rekorunu oluştur
-                </>
+                  <BarChart3 size={16} />{t("questionCount", { count: counts[level] ?? 0 })}</>
               )}
             </div>
-          </button>
-        ))}
+          </button>;
+        })}
       </div>
       <p className="level-meta">
-        <Clock3 size={17} /> {GAME_CONFIG.questionCount} soru <span>·</span> Her
-        soruya {GAME_CONFIG.secondsPerQuestion} saniye <span>·</span> Her
-        cevapta yeni bir bilgi
+        <Clock3 size={17} /> {t("levelMeta")}
       </p>
       {error && (
         <p className="error-message" role="alert">
-          {error} Lütfen yeniden deneyin.
-        </p>
+          {error} {t("retry")}</p>
       )}
     </section>
   );
